@@ -1,7 +1,7 @@
 """ main.py """
 
 from __future__ import annotations
-from typing import Union, Optional
+from typing import Union, Optional, Set
 
 
 """ outline of modules
@@ -30,6 +30,10 @@ def parse(file):
     data = open(file)
 
 
+
+#TODO: create concept scheme from input file
+
+
 """ JSKOS classes 
 
 Built based on  https://gbv.github.io/jskos/context.json """
@@ -52,21 +56,61 @@ class LanguageMap:
         return self._mapping.get(language)
 
 
-class Concept:
+class Resource:
+    """ http://gbv.github.io/jskos/jskos.html#resource """
+
+    def __init__(self,
+                 uri: str = None,
+                 form: Set[str] = None,  # form = type
+                 context: str = None
+                 ) -> None:
+        self.uri = uri
+        self.form = form
+        if context is None:
+            self.context = "https://gbv.github.io/jskos/context.json"
+
+
+class Item(Resource):
+    """ http://gbv.github.io/jskos/jskos.html#item """
+
+    def __init__(self,
+                 uri: str = None,
+                 form: Set[str] = None,
+                 context: str = None,
+                 url: str = None,
+                 preflabel: LanguageMap = None
+                 ) -> None:
+        if url is None:
+            self.url = uri
+        self.preflabel = preflabel
+        super().__init__(uri, form, context)
+
+
+class Concept(Item):
     """ http://gbv.github.io/jskos/jskos.html#concept """
 
     def __init__(self,
-                 uri: str,
-                 jtype: set = None,
+                 uri: str = None,
+                 form: Set[str] = None,
+                 context: str = None,
                  url: str = None,
                  preflabel: LanguageMap = None,
-                 inscheme: set = None,
+                 inscheme: set = None
                  ) -> None:
-        self.uri = uri
-        if jtype is None:
-            self.jtype = set("http://www.w3.org/2004/02/skos/core#Concept")
-        if url is None:
-            self.url = self.uri
-        self.preflabel = preflabel
         self.inscheme = inscheme
+        super().__init__(uri, form, context, url, preflabel)
 
+
+class ConceptScheme(Item):
+    """ http://gbv.github.io/jskos/jskos.html#concept-schemes """
+
+    def __init__(self,
+                 uri: str = None,
+                 form: Set[str] = None,
+                 context: str = None,
+                 url: str = None,
+                 preflabel: LanguageMap = None,
+                 concepts: Set[Concept] = None
+                 ) -> None:
+        self.concepts = concepts
+        super().__init__(uri, form, context, url, preflabel)
