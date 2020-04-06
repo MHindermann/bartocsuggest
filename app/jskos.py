@@ -2,6 +2,9 @@
 
 JSKOS classes. Built based on  https://gbv.github.io/jskos/context.json """
 
+from __future__ import annotations
+from typing import Optional, Set
+
 
 class LanguageMap:
     """ http://gbv.github.io/jskos/jskos.html#language-map """
