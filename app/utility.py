@@ -45,5 +45,5 @@ class Utility:
                     continue
                 else:
                     concept = Concept(preflabel=LanguageMap({"en": row[0]}))  # TODO: automate language detection
-                    scheme.concepts.add(concept)
+                    scheme.concepts.append(concept)
         return scheme

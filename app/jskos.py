@@ -3,7 +3,7 @@
 JSKOS classes. Built based on  https://gbv.github.io/jskos/context.json """
 
 from __future__ import annotations
-from typing import Optional, Set
+from typing import Optional, Set, List
 
 
 class LanguageMap:
@@ -77,8 +77,8 @@ class ConceptScheme(Item):
                  context: str = None,
                  url: str = None,
                  preflabel: LanguageMap = None,
-                 concepts: Set[Concept] = None
+                 concepts: List[Concept] = None
                  ) -> None:
         if concepts is None:
-            self.concepts = set()
+            self.concepts = []
         super().__init__(uri, form, context, url, preflabel)
