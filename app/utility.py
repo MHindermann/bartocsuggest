@@ -3,13 +3,14 @@
 Utility functions. """
 
 from __future__ import annotations
-from typing import Optional, Set
+from typing import Optional
 from os import path
 from openpyxl import load_workbook
 
 from jskos import Concept, ConceptScheme, LanguageMap
 
 DIR = path.dirname(path.abspath(__file__))
+
 
 class Utility:
     """ Utility functions """

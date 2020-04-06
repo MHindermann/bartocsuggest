@@ -7,23 +7,11 @@ MODULE 3: analyse result
 MODULE 4: output result as x """
 
 from __future__ import annotations
-from typing import Optional, List
-from os import path
-
-import requests
+from typing import List
 
 from utility import Utility
 
-DIR = path.dirname(path.abspath(__file__))
-
-
-def parse(file):
-    """ """
-    data = open(file)
-
-
-Utility.load_file("owcm_index.xlsx")
-
+import requests
 
 """ BARTOC FAST query module
 
@@ -74,3 +62,7 @@ class Query:
                    "disabled": self.disabled}
 
         return requests.get(url=FAST_API, params=payload)
+
+
+Utility.load_file("owcm_index.xlsx")
+print("OK")
