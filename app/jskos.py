@@ -79,5 +79,6 @@ class ConceptScheme(Item):
                  preflabel: LanguageMap = None,
                  concepts: Set[Concept] = None
                  ) -> None:
-        self.concepts = concepts
+        if concepts is None:
+            self.concepts = set()
         super().__init__(uri, form, context, url, preflabel)
