@@ -13,6 +13,7 @@ from utility import Utility
 from jskos import ConceptScheme
 
 import requests
+import json
 
 """ BARTOC FAST query module
 
@@ -53,15 +54,16 @@ class Query:
                  searchword: str,
                  maxsearchtime: int = 5,
                  duplicates: bool = True,
-                 disabled: List[str] = None) -> None:
+                 disabled: List[str] = None,
+                 _response: requests.models.Response = None) -> None:
         self.searchword = searchword
         self.maxsearchtime = maxsearchtime
         self.duplicates = duplicates
         if disabled is None:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
-        self.result = None
+        self._response = _response
 
-    def send(self) -> requests.models.Response:
+    def send(self) -> None:
         """ Send query as HTTP request to BARTOC FAST API """
 
         payload = {"searchword": self.searchword,
@@ -69,8 +71,74 @@ class Query:
                    "duplicates": "on",  # TODO: transform parameter into payload
                    "disabled": self.disabled}
 
-        self.result = requests.get(url=FAST_API, params=payload)
-        return self.result
+        self._response = requests.get(url=FAST_API, params=payload)
+
+    def get_response(self, verbose: str = 0) -> requests.models.Response:
+        """ Return the query response """
+
+        if self._response is None:
+            self.send()
+            if verbose == 1:
+                print(self._response.text)
+
+        return self._response
+
+
+class Store:
+    """ Stores everything! """
+
+    def __init__(self,
+                 filename: str,
+                 sources: List[Source] = None) -> None:
+        self.scheme = Utility.load_file(filename)
+        if sources is None:
+            self.sources = self.make_sources()
+
+    def make_sources(self):
+        """ Populate the store with sources """
+
+        sources = []
+        for name in FAST_SOURCES:
+            sources.append(Source(name))  # TODO: add uri, etc.
+
+        return sources
+
+    def update_score(response: requests.models.Response) -> None:
+        """ bla """
+
+        print(response.json())
+
+
+class Score:
+    """ Bla """
+
+    def __init__(self,
+                 preflabel: int = None,
+                 altlabel: int = None,
+                 hiddenlabel: int = None,
+                 definition: int = None) -> None:
+        self.preflabel = preflabel
+        self.altlabel = altlabel
+        self.hiddenlabel = hiddenlabel
+        self.definition = definition
+
+        def compute(input: str, output: str) -> None:
+            """ bla """
+            pass
+
+
+class Source:
+    """ Bla """
+
+    def __init__(self,
+                 name: str,
+                 score: Score = None) -> None:
+        self.name = name
+        self.score = score
+
+    def update_score(self):
+        pass
+
 
 
 def collect(scheme: ConceptScheme, maximum: int = 10) -> None:
@@ -82,13 +150,19 @@ def collect(scheme: ConceptScheme, maximum: int = 10) -> None:
         if cutoff > maximum:  # debug:
             break
 
-        searchword = concept.preflabel.get_value("en")
+        searchword = concept.preflabel.get_value("en")  # TODO: generalize this
         print(searchword)
 
-        query = Query(concept)
-        result = query.send()
+        query = Query(searchword)
+        response = query.get_response()
 
         cutoff += 1
+
+def analyze(result: requests.models.Response):
+    """ """
+
+    pass
+
 
 # TODO: add analyse function for collected results
 
@@ -96,9 +170,9 @@ def collect(scheme: ConceptScheme, maximum: int = 10) -> None:
 def run():
     """ Run the app """
 
-    scheme = Utility.load_file("owcm_index.xlsx")
-    print(scheme)
-    print(len(scheme.concepts))
-    collect(scheme)
+    store = Store("owcm_index.xlsx")
+
+    print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
+    collect(store.scheme)
 
 run()
