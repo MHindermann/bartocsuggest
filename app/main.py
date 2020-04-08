@@ -14,7 +14,6 @@ from jskos import ConceptScheme
 
 import Levenshtein
 import requests
-import json
 
 """ BARTOC FAST query module
 
@@ -64,6 +63,12 @@ class Query:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
         self._response = _response  # TODO: save/cache response in DB/in RAM/on HD for further analysis
 
+    def send(self) -> None:
+        """ Send query as HTTP request to BARTOC FAST API """
+
+        payload = self.get_payload()
+        self._response = requests.get(url=FAST_API, params=payload)
+
     def get_payload(self):
         """ Return the payload (parameters passed in URL) of the query """
 
@@ -79,12 +84,6 @@ class Query:
 
         return payload
 
-    def send(self) -> None:
-        """ Send query as HTTP request to BARTOC FAST API """
-
-        payload = self.get_payload()
-        self._response = requests.get(url=FAST_API, params=payload)
-
     def get_response(self, verbose: int = 0) -> requests.models.Response:
         """ Return the query response """
 
@@ -99,6 +98,24 @@ class Query:
         """ Return the query searchword """
 
         return self.searchword
+
+    def update_sources(self, store: Store) -> None:
+        """ Update score vectors of sources based on query response """
+
+        # extract results from response:
+        response = self.get_response().json()
+        results = response.get("results")
+
+        if results is None:
+            return None
+
+        for result in results:
+            # get source:
+            name = result.get("source")
+            source = store.get_source(name)
+            # update score vector:
+            searchword = self.get_searchword()
+            source.score_vector.update_distance(searchword, result)
 
 
 class Store:
@@ -129,41 +146,21 @@ class Store:
 
         return None
 
-    def preload(self, maximum: int = 100000):
-        """ Preload all query responses for a concept scheme """
-
-        counter = 0
+    def preload(self, maximum: int = 100000, minimum: int = 0):
+        """ Preload all query responses for a concept scheme. Adjust minimum for batch preloading """
 
         for concept in self.scheme.concepts:
 
-            if counter > maximum:  # debug
+            if minimum > maximum:  # debug
                 break
 
             searchword = concept.preflabel.get_value("en")
             query = Query(searchword)
             response = query.get_response()
-            Utility.save_json(response.json(), counter)
-            counter += 1
+            Utility.save_json(response.json(), minimum)
+            minimum += 1
 
-
-
-def analyze(store: Store, query: Query) -> None:
-    """ Analyze a query response by assigning scores """
-
-    # extract results from response:
-    response = query.get_response().json()
-    results = response.get("results")
-
-    if results is None:
-        return None
-
-    for result in results:
-        # get source:
-        name = result.get("source")
-        source = store.get_source(name)
-        # update score vector:
-        searchword = query.get_searchword()
-        source.score_vector.update_distance(searchword, result)
+        print(f"{minimum + 1} query responses preloaded")
 
 
 class ScoreVector:
@@ -208,34 +205,40 @@ class Source:
             self.score_vector = ScoreVector()
 
 
-def collect(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: int = 0) -> None:
+def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: int = 0) -> None:
     """ Collect results for concepts in scheme """
 
-    cutoff = 0
+    # send queries and update sources:
+    counter = 0
     for concept in scheme.concepts:
 
-        if cutoff > maximum:  # debug
+        if counter > maximum:  # debug
             break
 
         searchword = concept.preflabel.get_value("en")  # TODO: generalize this
+
         if verbose == 1:
-            print(f"Searchword being collected is {searchword}")
+            print(f"Concept being fetched is {searchword}")
 
         query = Query(searchword)
-        analyze(store, query)
+        query.update_sources(store)
+        counter += 1
 
-        cutoff += 1
-
+    # TODO: do some magic on score vectors (precision, recall)
     for source in store._sources:
         print(f"{source.name}'s score vector: {source.score_vector._distance}")
 
-def run():
+
+def run(preload: bool = False):
     """ Run the app """
 
     store = Store("owcm_index.xlsx")
-
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
-    #collect(store, store.scheme, verbose=1)
-    store.preload()
 
-run()
+    if preload is True:
+        store.preload()
+    else:
+        main(store, store.scheme, verbose=1)
+
+
+run(True)
