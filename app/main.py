@@ -7,11 +7,12 @@ MODULE 3: analyse result
 MODULE 4: output result as x """
 
 from __future__ import annotations
-from typing import List
+from typing import List, Optional
 
 from utility import Utility
 from jskos import ConceptScheme
 
+import Levenshtein
 import requests
 import json
 
@@ -61,7 +62,7 @@ class Query:
         self.duplicates = duplicates
         if disabled is None:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
-        self._response = _response
+        self._response = _response  # TODO: save/cache response in DB/in RAM/on HD for further analysis
 
     def send(self) -> None:
         """ Send query as HTTP request to BARTOC FAST API """
@@ -73,7 +74,7 @@ class Query:
 
         self._response = requests.get(url=FAST_API, params=payload)
 
-    def get_response(self, verbose: str = 0) -> requests.models.Response:
+    def get_response(self, verbose: int = 0) -> requests.models.Response:
         """ Return the query response """
 
         if self._response is None:
@@ -82,6 +83,11 @@ class Query:
                 print(self._response.text)
 
         return self._response
+
+    def get_searchword(self):
+        """ Return the query searchword """
+
+        return self.searchword
 
 
 class Store:
@@ -92,7 +98,7 @@ class Store:
                  sources: List[Source] = None) -> None:
         self.scheme = Utility.load_file(filename)
         if sources is None:
-            self.sources = self.make_sources()
+            self._sources = self.make_sources()
 
     def make_sources(self):
         """ Populate the store with sources """
@@ -103,45 +109,78 @@ class Store:
 
         return sources
 
-    def update_score(response: requests.models.Response) -> None:
-        """ bla """
+    def get_source(self, name: str) -> Optional[Source]:
+        """ Use name to get source from store """
 
-        print(response.json())
+        for source in self._sources:
+            if name == source.name:
+                return source
+
+        return None
 
 
-class Score:
-    """ Bla """
+def analyze(store: Store, query: Query) -> None:
+    """ Analyze a query response by assigning scores """
+
+    # extract results from response:
+    response = query.get_response().json()
+    results = response.get("results")
+
+    if results is None:
+        return None
+
+    for result in results:
+        # get source:
+        name = result.get("source")
+        source = store.get_source(name)
+        # update score vector:
+        searchword = query.get_searchword()
+        source.score_vector.update_distance(searchword, result)
+
+
+class ScoreVector:
+    """ A vector for distance scores """
 
     def __init__(self,
-                 preflabel: int = None,
-                 altlabel: int = None,
-                 hiddenlabel: int = None,
-                 definition: int = None) -> None:
-        self.preflabel = preflabel
-        self.altlabel = altlabel
-        self.hiddenlabel = hiddenlabel
-        self.definition = definition
+                 distance: List[int] = None) -> None:
+        if distance is None:
+            self._distance = []
 
-        def compute(input: str, output: str) -> None:
-            """ bla """
-            pass
+    @classmethod
+    def make_distance_score(cls, searchword: str, result: dict) -> int:
+        """ Make the distance score for a result which is the minimum Levenshtein distance over all labels """
+
+        scores = []
+        labels = ["prefLabel", "altLabel", "hiddenLabel", "definition"]
+
+        for label in labels:
+            label_value = result.get(label)
+            if label_value is None:
+                continue
+            distance = Levenshtein.distance(searchword, label_value)
+            scores.append(distance)
+
+        return min(scores)
+
+    def update_distance(self, searchword: str, result: dict) -> None:
+        """ Update the distance vector with the distance score from searchword and result """
+
+        distance_score = self.make_distance_score(searchword, result)
+        self._distance.append(distance_score)
 
 
 class Source:
-    """ Bla """
+    """ A BARTOC FAST source """
 
     def __init__(self,
                  name: str,
-                 score: Score = None) -> None:
+                 score_vector: ScoreVector = None) -> None:
         self.name = name
-        self.score = score
-
-    def update_score(self):
-        pass
+        if score_vector is None:
+            self.score_vector = ScoreVector()
 
 
-
-def collect(scheme: ConceptScheme, maximum: int = 10) -> None:
+def collect(store: Store, scheme: ConceptScheme, maximum: int = 10, verbose: int = 0) -> None:
     """ Collect results for concepts in scheme """
 
     cutoff = 0
@@ -151,21 +190,16 @@ def collect(scheme: ConceptScheme, maximum: int = 10) -> None:
             break
 
         searchword = concept.preflabel.get_value("en")  # TODO: generalize this
-        print(searchword)
+        if verbose == 1:
+            print(f"Searchword being collected is {searchword}")
 
         query = Query(searchword)
-        response = query.get_response()
+        analyze(store, query)
 
         cutoff += 1
 
-def analyze(result: requests.models.Response):
-    """ """
-
-    pass
-
-
-# TODO: add analyse function for collected results
-
+    for source in store._sources:
+        print(f"{source.name}'s score vector: {source.score_vector._distance}")
 
 def run():
     """ Run the app """
@@ -173,6 +207,6 @@ def run():
     store = Store("owcm_index.xlsx")
 
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
-    collect(store.scheme)
+    collect(store, store.scheme, verbose=1)
 
 run()
