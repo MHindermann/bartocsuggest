@@ -64,14 +64,25 @@ class Query:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
         self._response = _response  # TODO: save/cache response in DB/in RAM/on HD for further analysis
 
-    def send(self) -> None:
-        """ Send query as HTTP request to BARTOC FAST API """
+    def get_payload(self):
+        """ Return the payload (parameters passed in URL) of the query """
+
+        if self.duplicates is True:
+            duplicates = "on"
+        else:
+            duplicates = "off"
 
         payload = {"searchword": self.searchword,
                    "maxsearchtime": self.maxsearchtime,
-                   "duplicates": "on",  # TODO: transform parameter into payload
+                   "duplicates": duplicates,
                    "disabled": self.disabled}
 
+        return payload
+
+    def send(self) -> None:
+        """ Send query as HTTP request to BARTOC FAST API """
+
+        payload = self.get_payload()
         self._response = requests.get(url=FAST_API, params=payload)
 
     def get_response(self, verbose: int = 0) -> requests.models.Response:
@@ -117,6 +128,23 @@ class Store:
                 return source
 
         return None
+
+    def preload(self, maximum: int = 100000):
+        """ Preload all query responses for a concept scheme """
+
+        counter = 0
+
+        for concept in self.scheme.concepts:
+
+            if counter > maximum:  # debug
+                break
+
+            searchword = concept.preflabel.get_value("en")
+            query = Query(searchword)
+            response = query.get_response()
+            Utility.save_json(response.json(), counter)
+            counter += 1
+
 
 
 def analyze(store: Store, query: Query) -> None:
@@ -180,13 +208,13 @@ class Source:
             self.score_vector = ScoreVector()
 
 
-def collect(store: Store, scheme: ConceptScheme, maximum: int = 10, verbose: int = 0) -> None:
+def collect(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: int = 0) -> None:
     """ Collect results for concepts in scheme """
 
     cutoff = 0
     for concept in scheme.concepts:
 
-        if cutoff > maximum:  # debug:
+        if cutoff > maximum:  # debug
             break
 
         searchword = concept.preflabel.get_value("en")  # TODO: generalize this
@@ -207,6 +235,7 @@ def run():
     store = Store("owcm_index.xlsx")
 
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
-    collect(store, store.scheme, verbose=1)
+    #collect(store, store.scheme, verbose=1)
+    store.preload()
 
 run()
