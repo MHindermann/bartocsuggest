@@ -57,3 +57,17 @@ class Utility:
 
         with open(filename, "w") as file:
             json.dump(json_object, file)
+
+        print(f"{filename} preloaded")
+
+    @classmethod
+    def load_json(cls, number: int) -> json:
+        """ Load a JSON object from a file """
+
+        filename = path.join(DIR, "preload/" + f"query_{number}.json")
+
+        with open(filename) as file:
+
+            json_object = json.load(file)
+
+            return json_object

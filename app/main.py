@@ -6,6 +6,8 @@ MODULE 2: send request to FAST
 MODULE 3: analyse result
 MODULE 4: output result as x """
 
+# TODO: add documentation with sphinx
+
 from __future__ import annotations
 from typing import List, Optional
 
@@ -14,6 +16,8 @@ from jskos import ConceptScheme
 
 import Levenshtein
 import requests
+import json
+import urllib.parse
 
 """ BARTOC FAST query module
 
@@ -61,7 +65,7 @@ class Query:
         self.duplicates = duplicates
         if disabled is None:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
-        self._response = _response  # TODO: save/cache response in DB/in RAM/on HD for further analysis
+        self._response = _response
 
     def send(self) -> None:
         """ Send query as HTTP request to BARTOC FAST API """
@@ -147,20 +151,34 @@ class Store:
         return None
 
     def preload(self, maximum: int = 100000, minimum: int = 0):
-        """ Preload all query responses for a concept scheme. Adjust minimum for batch preloading """
+        """ Preload all query responses for the concept scheme in the store. """
+
+        counter = 0
 
         for concept in self.scheme.concepts:
 
-            if minimum > maximum:  # debug
+            if counter > maximum:  # debug
                 break
+            elif counter < minimum:
+                counter += 1
+                continue
 
             searchword = concept.preflabel.get_value("en")
             query = Query(searchword)
             response = query.get_response()
-            Utility.save_json(response.json(), minimum)
-            minimum += 1
+            Utility.save_json(response.json(), counter)
+            counter += 1
 
         print(f"{minimum + 1} query responses preloaded")
+
+    def query_from_json(self, json_object: json) -> Query:
+        """ Load query from preloaded query response """
+
+        context = json_object.get("@context")
+        url = context.get("results").get("@id")
+        print(url)
+        # TODO: parse url with urllib tool, then use extracted parameters to build query
+        return None
 
 
 class ScoreVector:
@@ -205,24 +223,31 @@ class Source:
             self.score_vector = ScoreVector()
 
 
-def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: int = 0) -> None:
-    """ Collect results for concepts in scheme """
+def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: bool = False, preload: bool = False) -> None:
+    """ Ties together all the steps necessary to produce a suggestion (to be specified) """
 
     # send queries and update sources:
     counter = 0
-    for concept in scheme.concepts:
 
-        if counter > maximum:  # debug
-            break
+    # fetch from preload:
+    if preload is True:
+        pass
+        # TODO: load query from file, see tester at bottom
+    # fetch from remote:
+    else:
+        for concept in scheme.concepts:
 
-        searchword = concept.preflabel.get_value("en")  # TODO: generalize this
+            if counter > maximum:  # debug
+                break
 
-        if verbose == 1:
-            print(f"Concept being fetched is {searchword}")
+            searchword = concept.preflabel.get_value("en")  # TODO: generalize this
 
-        query = Query(searchword)
-        query.update_sources(store)
-        counter += 1
+            if verbose is True:
+                print(f"Concept being fetched is {searchword}")
+
+            query = Query(searchword)
+            query.update_sources(store)
+            counter += 1
 
     # TODO: do some magic on score vectors (precision, recall)
     for source in store._sources:
@@ -236,9 +261,15 @@ def run(preload: bool = False):
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
-        store.preload()
+        store.preload(minimum=2337)
     else:
-        main(store, store.scheme, verbose=1)
+        main(store, store.scheme, verbose=True)
 
 
-run(True)
+#run(True)
+
+#tester for query from preload
+
+store = Store("owcm_index.xlsx")
+test_json_object = Utility.load_json(1)
+query = store.query_from_json(test_json_object)
