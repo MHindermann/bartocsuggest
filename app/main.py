@@ -125,7 +125,7 @@ class Query:
             source = store.get_source(name)
             # update score vector:
             searchword = self.get_searchword()
-            source.score_vector.update_distance(searchword, result)
+            source.score_vector.update_distance_score(searchword, result)
 
     @classmethod
     def make_query_from_json(cls, json_object: Dict) -> Optional[Query]:
@@ -243,15 +243,16 @@ class Store:
 
 
 class ScoreVector:
-    """ A vector for distance scores """
+    """ A vector for distance scores. """
 
     def __init__(self,
                  distance: List[int] = None) -> None:
         if distance is None:
             self._distance = []
+        else:
+            self._distance = distance
 
-    @classmethod
-    def make_distance_score(cls, searchword: str, result: dict) -> int:
+    def make_distance_score(self, searchword: str, result: dict) -> Optional[int]:
         """ Make the distance score for a result which is the minimum Levenshtein distance over all labels """
 
         scores = []
@@ -264,17 +265,36 @@ class ScoreVector:
             distance = Levenshtein.distance(searchword, label_value)
             scores.append(distance)
 
-        return min(scores)
+        try:
+            return min(scores)
+        except ValueError:
+            return None
 
-    def update_distance(self, searchword: str, result: dict) -> None:
+    def update_distance_score(self, searchword: str, result: dict) -> None:
         """ Update the distance vector with the distance score from searchword and result """
 
         distance_score = self.make_distance_score(searchword, result)
-        self._distance.append(distance_score)
+        if distance_score is None:
+            pass
+        else:
+            self._distance.append(distance_score)
+
+    def get_distance_score(self) -> Optional[str]:
+
+        if len(self._distance) is 0:
+            return None
+
+        score_sum = sum(self._distance)
+        score_average = score_sum/len(self._distance)
+        score_coverage = len(self._distance)
+
+        # TODO: implement option of only taking best result per concept per source (and not multiple)
+
+        return f"sum: {score_sum}, average score: {round(score_average, 2)}, coverage: {score_coverage}"
 
 
 class Source:
-    """ A BARTOC FAST source """
+    """ A BARTOC FAST source. """
 
     def __init__(self,
                  name: str,
@@ -293,11 +313,11 @@ def main(preload: bool = False, remote: bool = True) -> None:
     if preload is True:
         store.preload(minimum=2337)
 
-    store.fetch_and_update(remote, maximum=10, verbose=True)
+    store.fetch_and_update(remote, maximum=2000, verbose=True)
 
     # TODO: do some magic on score vectors (precision, recall)
     for source in store._sources:
-        print(f"{source.name}'s score vector: {source.score_vector._distance}")
-
+        #print(f"{source.name}'s score vector: {source.score_vector._distance}")
+        print(f"{source.name}'s score: {source.score_vector.get_distance_score()}")
 
 main(preload=False, remote=False)
