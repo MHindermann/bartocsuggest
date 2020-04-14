@@ -104,11 +104,6 @@ class Query:
         else:
             return self._response
 
-    def get_searchword(self):
-        """ Return the query searchword """
-
-        return self.searchword
-
     def update_sources(self, store: Store) -> None:
         """ Update score vectors of sources based on query response """
 
@@ -124,8 +119,8 @@ class Query:
             name = result.get("source")
             source = store.get_source(name)
             # update score vector:
-            searchword = self.get_searchword()
-            source.score_vector.update_distance_score(searchword, result)
+            searchword = self.searchword
+            source.levenshtein_vector.update_score(searchword, result)
 
     @classmethod
     def make_query_from_json(cls, json_object: Dict) -> Optional[Query]:
@@ -174,7 +169,7 @@ class Store:
         return sources
 
     def get_source(self, name: str) -> Optional[Source]:
-        """ Use name to get source from store. """
+        """ Use name to get source. """
 
         for source in self._sources:
             if name == source.name:
@@ -242,18 +237,41 @@ class Store:
                 counter += 1
 
 
-class ScoreVector:
-    """ A vector for distance scores. """
+class Score:
+    """ A score. """
 
     def __init__(self,
-                 distance: List[int] = None) -> None:
-        if distance is None:
-            self._distance = []
-        else:
-            self._distance = distance
+                 value: int = None,
+                 searchword: str = None) -> None:
+        self.value = value
+        self.searchword = searchword
 
-    def make_distance_score(self, searchword: str, result: dict) -> Optional[int]:
-        """ Make the distance score for a result which is the minimum Levenshtein distance over all labels """
+
+class Vector:
+    """ A vector of scores. """
+
+    def __init__(self,
+                 vector: List[Score] = None) -> None:
+        if vector is None:
+            self._vector = []
+        else:
+            self._vector = vector
+
+    def get_vector(self) -> Optional[List[Score]]:
+        """ Get the vector if any. """
+
+        if len(self._vector) is 0:
+            return None
+        else:
+            return self._vector
+
+
+class LevenshteinVector(Vector):
+    """ A vector of Levenshtein distance scores """
+
+    def make_score(self, searchword: str, result: dict) -> Optional[Score]:
+        """ Make the Levenshtein score for a result.
+        The Levenshtein score is the minimum Levenshtein distance over all labels. """
 
         scores = []
         labels = ["prefLabel", "altLabel", "hiddenLabel", "definition"]
@@ -265,32 +283,97 @@ class ScoreVector:
             distance = Levenshtein.distance(searchword, label_value)
             scores.append(distance)
 
+        # catch malformed (= empty labels) results:
         try:
-            return min(scores)
+            min(scores)
         except ValueError:
             return None
 
-    def update_distance_score(self, searchword: str, result: dict) -> None:
-        """ Update the distance vector with the distance score from searchword and result """
+        return Score(min(scores), searchword)
 
-        distance_score = self.make_distance_score(searchword, result)
-        if distance_score is None:
+    def update_score(self, searchword: str, result: dict) -> None:
+        """ Update the Levenshtein vector with the Levenshtein score from searchword and result """
+
+        score = self.make_score(searchword, result)
+        if score is None:
             pass
         else:
-            self._distance.append(distance_score)
+            self._vector.append(score)
 
-    def get_distance_score(self) -> Optional[str]:
 
-        if len(self._distance) is 0:
+    def make_analysis(self) -> Optional[str]:
+        """ bla """
+
+        # TODO: better Ausgabeformat for analysis required (one that is sortable, etc)
+
+        score_sum = Analysis.score_sum(self)
+        score_average = Analysis.score_average(self)
+        score_coverage = Analysis.score_coverage(self)
+
+        best_vector = Analysis.best_vector(self)
+
+        best_sum = Analysis.score_sum(best_vector)
+        best_average = Analysis.score_average(best_vector)
+        best_coverage = Analysis.score_coverage(best_vector)
+
+        return f"sum: {score_sum}, best sum: {best_sum} // " \
+               f"average: {score_average}, best average: {best_average} // " \
+               f"coverage: {score_coverage}, best coverage: {best_coverage}"
+
+
+class Analysis:
+    """ A collection of methods for analyzing score vectors. """
+
+    @classmethod
+    def score_sum(cls, vector: LevenshteinVector) -> Optional[int]:
+        """ Return the sum of all scores in the vector.
+        The lower the sum the better. """
+
+        try:
+            return sum(score.value for score in vector.get_vector())
+        except (TypeError, AttributeError):
             return None
 
-        score_sum = sum(self._distance)
-        score_average = score_sum/len(self._distance)
-        score_coverage = len(self._distance)
+    @classmethod
+    def score_average(cls, vector: LevenshteinVector) -> Optional[float]:
+        """ Return the vector's average score.
+         The lower the average the better. """
 
-        # TODO: implement option of only taking best result per concept per source (and not multiple)
+        score_sum = cls.score_sum(vector)
+        if score_sum is None:
+            return None
+        else:
+            return round(score_sum/len(vector.get_vector()), 2)
 
-        return f"sum: {score_sum}, average score: {round(score_average, 2)}, coverage: {score_coverage}"
+    @classmethod
+    def score_coverage(cls, vector: LevenshteinVector) -> Optional[int]:
+        """ blha """
+
+        try:
+            return len(vector.get_vector())
+        except (TypeError, AttributeError):
+            return None
+
+    @classmethod
+    def best_vector(cls, vector: LevenshteinVector) -> Optional[LevenshteinVector]:
+        """ Return the best vector of a vector.
+         The best vector has the best score for each searchword. """
+
+        # collect all unique searchwords in vector:
+        initial_vector = vector.get_vector()
+        if initial_vector is None:
+            return None
+        else:
+            searchwords = set(score.searchword for score in initial_vector)
+
+        # choose best score for each seachword:
+        best_vector = []
+        for word in searchwords:
+            scores = [score for score in initial_vector if score.searchword == word]
+            best_score = sorted(scores, key=lambda x: x.value)[0]
+            best_vector.append(best_score)
+
+        return LevenshteinVector(best_vector)
 
 
 class Source:
@@ -298,10 +381,10 @@ class Source:
 
     def __init__(self,
                  name: str,
-                 score_vector: ScoreVector = None) -> None:
+                 levenshtein_vector: LevenshteinVector = None) -> None:
         self.name = name
-        if score_vector is None:
-            self.score_vector = ScoreVector()
+        if levenshtein_vector is None:
+            self.levenshtein_vector = LevenshteinVector()
 
 
 def main(preload: bool = False, remote: bool = True) -> None:
@@ -317,7 +400,16 @@ def main(preload: bool = False, remote: bool = True) -> None:
 
     # TODO: do some magic on score vectors (precision, recall)
     for source in store._sources:
-        #print(f"{source.name}'s score vector: {source.score_vector._distance}")
-        print(f"{source.name}'s score: {source.score_vector.get_distance_score()}")
+        # TODO: something like:
+        #  analysed = []
+        #  analysis = Analysis(source)
+        #  analysed.append(analysis)
+        #  analysed_sorted = sorted(analysed, key=lambda x: x.most_important_parameter)
+        print(f"{source.name}'s score: {source.levenshtein_vector.make_analysis()}")
+
 
 main(preload=False, remote=False)
+
+# TODO: for maximim=2000:
+#  FORTH's score: sum: 156, best sum: 67 // average: 1.15, best average: 1.46 // coverage: 136, best coverage: 46
+#  here best average is higher than average?!
