@@ -12,11 +12,9 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Union
 
 from utility import Utility
-from jskos import ConceptScheme
 
 import Levenshtein
 import requests
-import json
 import urllib.parse
 
 """ BARTOC FAST query module
@@ -176,7 +174,7 @@ class Store:
         return sources
 
     def get_source(self, name: str) -> Optional[Source]:
-        """ Use name to get source from store """
+        """ Use name to get source from store. """
 
         for source in self._sources:
             if name == source.name:
@@ -184,7 +182,7 @@ class Store:
 
         return None
 
-    def preload(self, maximum: int = 100000, minimum: int = 0):
+    def preload(self, maximum: int = 100000, minimum: int = 0) -> None:
         """ Preload all query responses for the concept scheme in the store. """
 
         counter = 0
@@ -200,18 +198,48 @@ class Store:
             searchword = concept.preflabel.get_value("en")
             query = Query(searchword)
             response = query.get_response()
-            Utility.save_json(response.json(), counter)
+            Utility.save_json(response, counter)
             counter += 1
 
         print(f"{minimum + 1} query responses preloaded")
 
+    def fetch_and_update(self, remote: bool = True, maximum: int = 5, verbose: bool = False) -> None:
+        """ Fetch query responses and update sources. """
 
-    def fetch_and_update(self):
-        """ Fetch queries and update sources """
+        counter = 0
 
-        pass
+        # fetch from preload:
+        if remote is False:
 
-        # TODO: put stuff from main here
+            while True:
+
+                if counter > maximum:  # debug
+                    break
+
+                try:
+                    json_object = Utility.load_json(counter)
+                    query = Query.make_query_from_json(json_object)
+                    query.update_sources(self)
+                    counter += 1
+
+                except FileNotFoundError:
+                    break
+
+        # fetch from remote:
+        else:
+            for concept in self.scheme.concepts:
+
+                if counter > maximum:  # debug
+                    break
+
+                searchword = concept.preflabel.get_value("en")  # TODO: generalize this
+
+                if verbose is True:
+                    print(f"Concept being fetched is {searchword}")
+
+                query = Query(searchword)
+                query.update_sources(self)
+                counter += 1
 
 
 class ScoreVector:
@@ -256,67 +284,20 @@ class Source:
             self.score_vector = ScoreVector()
 
 
-def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: bool = False, remote: bool = True) -> None:
-    """ Ties together all the steps necessary to produce a suggestion (to be specified) """
-
-    # send queries and update sources:
-    counter = 0
-
-    # fetch from preload:
-    if remote is False:
-
-        while counter < 100000:
-
-            if counter > maximum:  # debug
-                break
-
-            try:
-                json_object = Utility.load_json(counter)
-                query = Query.make_query_from_json(json_object)
-                query.update_sources(store)
-                counter += 1
-
-            except FileNotFoundError:
-                break
-
-    # fetch from remote:
-    else:
-        for concept in scheme.concepts:
-
-            if counter > maximum:  # debug
-                break
-
-            searchword = concept.preflabel.get_value("en")  # TODO: generalize this
-
-            if verbose is True:
-                print(f"Concept being fetched is {searchword}")
-
-            query = Query(searchword)
-            query.update_sources(store)
-            counter += 1
-
-    # TODO: do some magic on score vectors (precision, recall)
-    for source in store._sources:
-        print(f"{source.name}'s score vector: {source.score_vector._distance}")
-
-
-def run(preload: bool = False):
-    """ Run the app """
+def main(preload: bool = False, remote: bool = True) -> None:
+    """ Main function. """
 
     store = Store("owcm_index.xlsx")
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
         store.preload(minimum=2337)
-    else:
-        main(store, store.scheme, verbose=True, remote=False)
+
+    store.fetch_and_update(remote, maximum=10, verbose=True)
+
+    # TODO: do some magic on score vectors (precision, recall)
+    for source in store._sources:
+        print(f"{source.name}'s score vector: {source.score_vector._distance}")
 
 
-run()
-
-#tester for query from preload
-
-#store = Store("owcm_index.xlsx")
-#test_json_object = Utility.load_json(1000000)
-#query = store.query_from_json(test_json_object)
-#print(query.get_response())
+main(preload=False, remote=False)

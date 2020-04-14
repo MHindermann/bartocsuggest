@@ -50,7 +50,7 @@ class Utility:
         return scheme
 
     @classmethod
-    def save_json(cls, json_object: json, number: int):
+    def save_json(cls, json_object: Dict, number: int):
         """ Save a JSON object to a file """
 
         filename = path.join(DIR, "preload/" + f"query_{number}.json")
