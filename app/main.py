@@ -9,7 +9,7 @@ MODULE 4: output result as x """
 # TODO: add documentation with sphinx
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 
 from utility import Utility
 from jskos import ConceptScheme
@@ -59,7 +59,7 @@ class Query:
                  maxsearchtime: int = 5,
                  duplicates: bool = True,
                  disabled: List[str] = None,
-                 _response: requests.models.Response = None) -> None:
+                 _response: Union[Dict, requests.models.Response] = None) -> None:
         self.searchword = searchword
         self.maxsearchtime = maxsearchtime
         self.duplicates = duplicates
@@ -91,12 +91,20 @@ class Query:
     def get_response(self, verbose: int = 0) -> requests.models.Response:
         """ Return the query response """
 
+        # fetch response if not available:
         if self._response is None:
             self.send()
             if verbose == 1:
                 print(self._response.text)
+            return self._response.json()
 
-        return self._response
+        # response is cached:
+        elif self._response is requests.models.Response:
+            return self._response.json()
+
+        # response is preloaded:
+        else:
+            return self._response
 
     def get_searchword(self):
         """ Return the query searchword """
@@ -107,7 +115,7 @@ class Query:
         """ Update score vectors of sources based on query response """
 
         # extract results from response:
-        response = self.get_response().json()
+        response = self.get_response()
         results = response.get("results")
 
         if results is None:
@@ -171,14 +179,30 @@ class Store:
 
         print(f"{minimum + 1} query responses preloaded")
 
-    def query_from_json(self, json_object: json) -> Query:
-        """ Load query from preloaded query response """
+    def query_from_json(self, json_object: Dict) -> Optional[Query]:
+        """ Load query object from preloaded query response """
 
+        # extract query parameters from json object:
         context = json_object.get("@context")
         url = context.get("results").get("@id")
-        print(url)
-        # TODO: parse url with urllib tool, then use extracted parameters to build query
-        return None
+        parsed_url = urllib.parse.urlparse(url)
+        parsed_query = (urllib.parse.parse_qs(parsed_url.query))
+
+        # make query object from instantiated parameters and json object:
+        try:
+            searchword = parsed_query.get("searchword")[0]
+            maxsearchtime = parsed_query.get("maxsearchtime")[0]
+            duplicates = parsed_query.get("duplicates")[0]
+            if duplicates == "on":
+                duplicates = True
+            else:
+                duplicates = False
+            disabled = parsed_query.get("disabled")
+            query = Query(searchword, int(maxsearchtime), duplicates, disabled, _response=json_object)
+        except IndexError:
+            return None
+
+        return query
 
 
 class ScoreVector:
@@ -223,16 +247,29 @@ class Source:
             self.score_vector = ScoreVector()
 
 
-def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: bool = False, preload: bool = False) -> None:
+def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: bool = False, remote: bool = True) -> None:
     """ Ties together all the steps necessary to produce a suggestion (to be specified) """
 
     # send queries and update sources:
     counter = 0
 
     # fetch from preload:
-    if preload is True:
-        pass
-        # TODO: load query from file, see tester at bottom
+    if remote is False:
+
+        while counter < 100000:
+
+            if counter > maximum:  # debug
+                break
+
+            try:
+                json_object = Utility.load_json(counter)
+                query = store.query_from_json(json_object)
+                query.update_sources(store)
+                counter += 1
+
+            except FileNotFoundError:
+                break
+
     # fetch from remote:
     else:
         for concept in scheme.concepts:
@@ -263,13 +300,14 @@ def run(preload: bool = False):
     if preload is True:
         store.preload(minimum=2337)
     else:
-        main(store, store.scheme, verbose=True)
+        main(store, store.scheme, verbose=True, remote=False)
 
 
-#run(True)
+run()
 
 #tester for query from preload
 
-store = Store("owcm_index.xlsx")
-test_json_object = Utility.load_json(1)
-query = store.query_from_json(test_json_object)
+#store = Store("owcm_index.xlsx")
+#test_json_object = Utility.load_json(1000000)
+#query = store.query_from_json(test_json_object)
+#print(query.get_response())

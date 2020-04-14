@@ -3,7 +3,7 @@
 Utility functions. """
 
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Dict
 from os import path
 from openpyxl import load_workbook
 from jskos import Concept, ConceptScheme, LanguageMap
@@ -61,8 +61,8 @@ class Utility:
         print(f"{filename} preloaded")
 
     @classmethod
-    def load_json(cls, number: int) -> json:
-        """ Load a JSON object from a file """
+    def load_json(cls, number: int) -> Dict:
+        """ Load a JSON object as Python dictionary from a file """
 
         filename = path.join(DIR, "preload/" + f"query_{number}.json")
 
