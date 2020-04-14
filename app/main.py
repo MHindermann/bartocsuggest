@@ -88,7 +88,7 @@ class Query:
 
         return payload
 
-    def get_response(self, verbose: int = 0) -> requests.models.Response:
+    def get_response(self, verbose: int = 0) -> Dict:
         """ Return the query response """
 
         # fetch response if not available:
@@ -128,6 +128,32 @@ class Query:
             # update score vector:
             searchword = self.get_searchword()
             source.score_vector.update_distance(searchword, result)
+
+    @classmethod
+    def make_query_from_json(cls, json_object: Dict) -> Optional[Query]:
+        """ Load query object from preloaded query response """
+
+        # extract query parameters from json object:
+        context = json_object.get("@context")
+        url = context.get("results").get("@id")
+        parsed_url = urllib.parse.urlparse(url)
+        parsed_query = (urllib.parse.parse_qs(parsed_url.query))
+
+        # make query object from instantiated parameters and json object:
+        try:
+            searchword = parsed_query.get("searchword")[0]
+            maxsearchtime = parsed_query.get("maxsearchtime")[0]
+            duplicates = parsed_query.get("duplicates")[0]
+            if duplicates == "on":
+                duplicates = True
+            else:
+                duplicates = False
+            disabled = parsed_query.get("disabled")
+            query = Query(searchword, int(maxsearchtime), duplicates, disabled, _response=json_object)
+        except IndexError:
+            return None
+
+        return query
 
 
 class Store:
@@ -179,30 +205,13 @@ class Store:
 
         print(f"{minimum + 1} query responses preloaded")
 
-    def query_from_json(self, json_object: Dict) -> Optional[Query]:
-        """ Load query object from preloaded query response """
 
-        # extract query parameters from json object:
-        context = json_object.get("@context")
-        url = context.get("results").get("@id")
-        parsed_url = urllib.parse.urlparse(url)
-        parsed_query = (urllib.parse.parse_qs(parsed_url.query))
+    def fetch_and_update(self):
+        """ Fetch queries and update sources """
 
-        # make query object from instantiated parameters and json object:
-        try:
-            searchword = parsed_query.get("searchword")[0]
-            maxsearchtime = parsed_query.get("maxsearchtime")[0]
-            duplicates = parsed_query.get("duplicates")[0]
-            if duplicates == "on":
-                duplicates = True
-            else:
-                duplicates = False
-            disabled = parsed_query.get("disabled")
-            query = Query(searchword, int(maxsearchtime), duplicates, disabled, _response=json_object)
-        except IndexError:
-            return None
+        pass
 
-        return query
+        # TODO: put stuff from main here
 
 
 class ScoreVector:
@@ -263,7 +272,7 @@ def main(store: Store, scheme: ConceptScheme, maximum: int = 5, verbose: bool = 
 
             try:
                 json_object = Utility.load_json(counter)
-                query = store.query_from_json(json_object)
+                query = Query.make_query_from_json(json_object)
                 query.update_sources(store)
                 counter += 1
 
