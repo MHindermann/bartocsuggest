@@ -462,10 +462,6 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> No
 
 main(preload=False, remote=False, sensitivity=1)
 
-
-# TODO: have some metric that has a cutoff for scores (e.g., 3) in order to calculate recall et al.
-# perhaps call it sensitivity and use it as argument
-
 # TODO: implement multilanguage result parser
 
 # TODO: for maximim=2000:
