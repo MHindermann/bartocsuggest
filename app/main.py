@@ -124,7 +124,7 @@ class Query:
 
     @classmethod
     def make_query_from_json(cls, json_object: Dict) -> Optional[Query]:
-        """ Load query object from preloaded query response """
+        """ Return query object initialized from preloaded query response """
 
         # extract query parameters from json object:
         context = json_object.get("@context")
@@ -160,7 +160,7 @@ class Store:
             self._sources = self.make_sources()
 
     def make_sources(self):
-        """ Populate the store with sources """
+        """ Return initialized sources from constant. """
 
         sources = []
         for name in FAST_SOURCES:
@@ -169,7 +169,7 @@ class Store:
         return sources
 
     def get_source(self, name: str) -> Optional[Source]:
-        """ Use name to get source. """
+        """ Return source by name. """
 
         for source in self._sources:
             if name == source.name:
@@ -178,7 +178,7 @@ class Store:
         return None
 
     def preload(self, maximum: int = 100000, minimum: int = 0) -> None:
-        """ Preload all query responses for the concept scheme in the store. """
+        """ Save to HD the concept scheme's query responses. """
 
         counter = 0
 
@@ -207,34 +207,52 @@ class Store:
         if remote is False:
 
             while True:
-
                 if counter > maximum:  # debug
                     break
-
                 try:
                     json_object = Utility.load_json(counter)
                     query = Query.make_query_from_json(json_object)
                     query.update_sources(self)
                     counter += 1
-
                 except FileNotFoundError:
                     break
 
         # fetch from remote:
         else:
             for concept in self.scheme.concepts:
-
                 if counter > maximum:  # debug
                     break
-
                 searchword = concept.preflabel.get_value("en")  # TODO: generalize this
-
                 if verbose is True:
                     print(f"Concept being fetched is {searchword}")
-
                 query = Query(searchword)
                 query.update_sources(self)
                 counter += 1
+
+    def update_rankings(self):
+        """ Update the sources' rankings. """
+
+        for source in self._sources:
+            source.update_ranking(self)
+        print("Sources' rankings updated.")
+
+    def make_suggestion(self, score_type: str = "score_average"):
+        """ Return sources from best to worst base on score type. """
+
+        not_candidates = []
+        candidates = []
+        for source in self._sources:
+            getattr(source.ranking, score_type)
+            if getattr(source.ranking, score_type) is None:
+                not_candidates.append(source)
+            else:
+                candidates.append(source)
+        candidates.sort(key=lambda x: getattr(x.ranking, score_type))  # TODO: depending on score_type reverse=True
+
+        for source in candidates:
+            print(f"{source.name} {source.ranking.str()}")
+        for source in not_candidates:
+            print(f"{source.name} {source.ranking.str()}")
 
 
 class Score:
@@ -301,31 +319,28 @@ class LevenshteinVector(Vector):
             self._vector.append(score)
 
 
-    def make_analysis(self) -> Optional[str]:
-        """ bla """
+class Ranking:
+    """ The ranking of a source given its best Levenshtein vector. """
 
-        # TODO: better Ausgabeformat for analysis required (one that is sortable, etc)
+    def __init__(self,
+                 score_sum: int = None,
+                 score_average: float = None,
+                 score_coverage: int = None,
+                 recall: float = None) -> None:
+        self.score_sum = score_sum
+        self.score_average = score_average
+        self.score_coverage = score_coverage
+        self.recall = recall
 
-        score_sum = Analysis.score_sum(self)
-        score_average = Analysis.score_average(self)
-        score_coverage = Analysis.score_coverage(self)
-
-        best_vector = Analysis.best_vector(self)
-
-        best_sum = Analysis.score_sum(best_vector)
-        best_average = Analysis.score_average(best_vector)
-        best_coverage = Analysis.score_coverage(best_vector)
-
-        return f"sum: {score_sum}, best sum: {best_sum} // " \
-               f"average: {score_average}, best average: {best_average} // " \
-               f"coverage: {score_coverage}, best coverage: {best_coverage}"
+    def str(self) -> str:
+        return f"Sum: {self.score_sum} / Average: {self.score_average} / Coverage: {self.score_coverage} / Recall: {self.recall}"
 
 
 class Analysis:
     """ A collection of methods for analyzing score vectors. """
 
     @classmethod
-    def score_sum(cls, vector: LevenshteinVector) -> Optional[int]:
+    def make_score_sum(cls, vector: LevenshteinVector) -> Optional[int]:
         """ Return the sum of all scores in the vector.
         The lower the sum the better. """
 
@@ -335,19 +350,19 @@ class Analysis:
             return None
 
     @classmethod
-    def score_average(cls, vector: LevenshteinVector) -> Optional[float]:
+    def make_score_average(cls, vector: LevenshteinVector) -> Optional[float]:
         """ Return the vector's average score.
          The lower the average the better. """
 
-        score_sum = cls.score_sum(vector)
+        score_sum = cls.make_score_sum(vector)
         if score_sum is None:
             return None
         else:
             return round(score_sum/len(vector.get_vector()), 2)
 
     @classmethod
-    def score_coverage(cls, vector: LevenshteinVector) -> Optional[int]:
-        """ blha """
+    def make_score_coverage(cls, vector: LevenshteinVector) -> Optional[int]:
+        """ Return the number of scores in the vector. """
 
         try:
             return len(vector.get_vector())
@@ -355,7 +370,7 @@ class Analysis:
             return None
 
     @classmethod
-    def best_vector(cls, vector: LevenshteinVector) -> Optional[LevenshteinVector]:
+    def make_best_vector(cls, vector: LevenshteinVector) -> Optional[LevenshteinVector]:
         """ Return the best vector of a vector.
          The best vector has the best score for each searchword. """
 
@@ -375,16 +390,39 @@ class Analysis:
 
         return LevenshteinVector(best_vector)
 
+    @classmethod
+    def make_recall(cls, relevant: int, retrieved: int) -> Optional[float]:
+        """ Return recall.
+         See https://en.wikipedia.org/wiki/Precision_and_recall#Recall """
+
+        try:
+            return retrieved/relevant
+        except (TypeError, AttributeError):
+            return None
+
 
 class Source:
     """ A BARTOC FAST source. """
 
     def __init__(self,
                  name: str,
-                 levenshtein_vector: LevenshteinVector = None) -> None:
+                 levenshtein_vector: LevenshteinVector = None,
+                 ranking: Ranking = None) -> None:
         self.name = name
         if levenshtein_vector is None:
             self.levenshtein_vector = LevenshteinVector()
+        self.ranking = ranking
+
+    def update_ranking(self, store: Store):
+        """ Update the sources ranking. """
+
+        best_vector = Analysis.make_best_vector(self.levenshtein_vector)
+
+        self.ranking = Ranking()
+        self.ranking.score_sum = Analysis.make_score_sum(best_vector)
+        self.ranking.score_average = Analysis.make_score_average(best_vector)
+        self.ranking.score_coverage = Analysis.make_score_coverage(best_vector)
+        self.ranking.recall = Analysis.make_recall(len(store.scheme.concepts), self.ranking.score_coverage)
 
 
 def main(preload: bool = False, remote: bool = True) -> None:
@@ -394,18 +432,21 @@ def main(preload: bool = False, remote: bool = True) -> None:
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
-        store.preload(minimum=2337)
+        store.preload(minimum=4539)
 
-    store.fetch_and_update(remote, maximum=2000, verbose=True)
+    store.fetch_and_update(remote, maximum=4500, verbose=True)
 
+    store.update_rankings()
+
+    store.make_suggestion("recall")
     # TODO: do some magic on score vectors (precision, recall)
-    for source in store._sources:
+    #for source in store._sources:
         # TODO: something like:
         #  analysed = []
         #  analysis = Analysis(source)
         #  analysed.append(analysis)
         #  analysed_sorted = sorted(analysed, key=lambda x: x.most_important_parameter)
-        print(f"{source.name}'s score: {source.levenshtein_vector.make_analysis()}")
+       #print(f"{source.name}'s score: {source.levenshtein_vector.make_analysis()}")
 
 
 main(preload=False, remote=False)
