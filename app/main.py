@@ -1,15 +1,11 @@
-""" main.py
+""" main.py  """
 
-Main module. Outline:
-MODULE 1: read input data from local file
-MODULE 2: send request to FAST
-MODULE 3: analyse result
-MODULE 4: output result as x """
-
-# TODO: add documentation with sphinx
+# TODO: package: https://packaging.python.org/tutorials/packaging-projects/
+# TODO: sphinx documentation: https://packaging.python.org/tutorials/creating-documentation/
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Union
+from time import sleep
 
 from utility import Utility
 
@@ -69,7 +65,12 @@ class Query:
         """ Send query as HTTP request to BARTOC FAST API """
 
         payload = self.get_payload()
-        self._response = requests.get(url=FAST_API, params=payload)
+        try:
+            self._response = requests.get(url=FAST_API, params=payload)
+        except requests.exceptions.ConnectionError:
+            print(f"requests.exceptions.ConnectionError! Trying again in 5 seconds...")
+            sleep(5)
+            self.send()
 
     def get_payload(self):
         """ Return the payload (parameters passed in URL) of the query """
@@ -450,9 +451,9 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> No
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
-        store.preload(minimum=5000)
+        store.preload(minimum=5600)
 
-    store.fetch_and_update(remote, maximum=5000, verbose=True)
+    store.fetch_and_update(remote, maximum=5600, verbose=True)
 
     store.update_rankings(sensitivity=sensitivity, verbose=True)
 
@@ -463,7 +464,5 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> No
 main(preload=False, remote=False, sensitivity=1)
 
 # TODO: implement multilanguage result parser
-
-# TODO: for maximim=2000:
-# FORTH's score: sum: 156, best sum: 67 // average: 1.15, best average: 1.46 // coverage: 136, best coverage: 46
-# here best average is higher than average?!
+# TODO: implement measure for noise
+# TODO: refactor all class methods into public and private
