@@ -201,11 +201,13 @@ class Store:
     def fetch_and_update(self, remote: bool = True, maximum: int = 5, verbose: bool = False) -> None:
         """ Fetch query responses and update sources. """
 
+        if verbose is True:
+            print(f"Querying BARTOC FAST...")
+
         counter = 0
 
         # fetch from preload:
         if remote is False:
-
             while True:
                 if counter > maximum:  # debug
                     break
@@ -229,29 +231,43 @@ class Store:
                 query.update_sources(self)
                 counter += 1
 
-    def update_rankings(self):
+        if verbose is True:
+            print("Responses collected.")
+
+    def update_rankings(self, sensitivity: int, verbose: bool = False):
         """ Update the sources' rankings. """
 
-        for source in self._sources:
-            source.update_ranking(self)
-        print("Sources' rankings updated.")
+        if verbose is True:
+            print("Updating source rankings...")
 
-    def make_suggestion(self, score_type: str = "score_average"):
+        for source in self._sources:
+            source.update_ranking(self, sensitivity)
+
+        if verbose is True:
+            print("Source rankings updated.")
+
+    def make_suggestion(self, score_type: str = "score_average"): # TODO: rather print_suggestion(...)
         """ Return sources from best to worst base on score type. """
 
-        not_candidates = []
-        candidates = []
-        for source in self._sources:
-            getattr(source.ranking, score_type)
-            if getattr(source.ranking, score_type) is None:
-                not_candidates.append(source)
-            else:
-                candidates.append(source)
-        candidates.sort(key=lambda x: getattr(x.ranking, score_type))  # TODO: depending on score_type reverse=True
+        # fix sorting direction:
+        high_to_low = False
+        if score_type is "recall":
+            high_to_low = True
 
-        for source in candidates:
+        # sort sources by score type:
+        contenders = []
+        disqualified = []
+        for source in self._sources:
+            if getattr(source.ranking, score_type) is None:
+                disqualified.append(source)
+            else:
+                contenders.append(source)
+        contenders.sort(key=lambda x: getattr(x.ranking, score_type), reverse=high_to_low)
+
+        # print:
+        for source in contenders:
             print(f"{source.name} {source.ranking.str()}")
-        for source in not_candidates:
+        for source in disqualified:
             print(f"{source.name} {source.ranking.str()}")
 
 
@@ -370,7 +386,7 @@ class Analysis:
             return None
 
     @classmethod
-    def make_best_vector(cls, vector: LevenshteinVector) -> Optional[LevenshteinVector]:
+    def make_best_vector(cls, vector: LevenshteinVector, sensitivity: int) -> Optional[LevenshteinVector]:
         """ Return the best vector of a vector.
          The best vector has the best score for each searchword. """
 
@@ -386,7 +402,9 @@ class Analysis:
         for word in searchwords:
             scores = [score for score in initial_vector if score.searchword == word]
             best_score = sorted(scores, key=lambda x: x.value)[0]
-            best_vector.append(best_score)
+            # check sensitivity:
+            if best_score.value <= sensitivity:
+                best_vector.append(best_score)
 
         return LevenshteinVector(best_vector)
 
@@ -413,10 +431,10 @@ class Source:
             self.levenshtein_vector = LevenshteinVector()
         self.ranking = ranking
 
-    def update_ranking(self, store: Store):
+    def update_ranking(self, store: Store, sensitivity: int):
         """ Update the sources ranking. """
 
-        best_vector = Analysis.make_best_vector(self.levenshtein_vector)
+        best_vector = Analysis.make_best_vector(self.levenshtein_vector, sensitivity)
 
         self.ranking = Ranking()
         self.ranking.score_sum = Analysis.make_score_sum(best_vector)
@@ -425,32 +443,31 @@ class Source:
         self.ranking.recall = Analysis.make_recall(len(store.scheme.concepts), self.ranking.score_coverage)
 
 
-def main(preload: bool = False, remote: bool = True) -> None:
+def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> None:
     """ Main function. """
 
     store = Store("owcm_index.xlsx")
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
-        store.preload(minimum=4539)
+        store.preload(minimum=5000)
 
-    store.fetch_and_update(remote, maximum=4500, verbose=True)
+    store.fetch_and_update(remote, maximum=5000, verbose=True)
 
-    store.update_rankings()
+    store.update_rankings(sensitivity=sensitivity, verbose=True)
 
+    print("Calculating suggestions...")
     store.make_suggestion("recall")
-    # TODO: do some magic on score vectors (precision, recall)
-    #for source in store._sources:
-        # TODO: something like:
-        #  analysed = []
-        #  analysis = Analysis(source)
-        #  analysed.append(analysis)
-        #  analysed_sorted = sorted(analysed, key=lambda x: x.most_important_parameter)
-       #print(f"{source.name}'s score: {source.levenshtein_vector.make_analysis()}")
 
 
-main(preload=False, remote=False)
+main(preload=False, remote=False, sensitivity=1)
+
+
+# TODO: have some metric that has a cutoff for scores (e.g., 3) in order to calculate recall et al.
+# perhaps call it sensitivity and use it as argument
+
+# TODO: implement multilanguage result parser
 
 # TODO: for maximim=2000:
-#  FORTH's score: sum: 156, best sum: 67 // average: 1.15, best average: 1.46 // coverage: 136, best coverage: 46
-#  here best average is higher than average?!
+# FORTH's score: sum: 156, best sum: 67 // average: 1.15, best average: 1.46 // coverage: 136, best coverage: 46
+# here best average is higher than average?!
