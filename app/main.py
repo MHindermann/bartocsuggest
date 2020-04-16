@@ -242,10 +242,13 @@ class Store:
         if verbose is True:
             print("Source rankings updated.")
 
-    def make_suggestion(self, score_type: str = "score_average"):  # TODO: rather print_suggestion(...)
+    def make_suggestion(self, sensitivity: int, score_type: str, verbose: bool = False) -> Suggestion:
         """ Return sources from best to worst base on score type. """
 
-        # fix sorting direction:
+        if verbose is True:
+            print("Calculating suggestions...")
+
+        # determine sorting direction:
         high_to_low = False
         if score_type is "recall":
             high_to_low = True
@@ -260,11 +263,14 @@ class Store:
                 contenders.append(source)
         contenders.sort(key=lambda x: getattr(x.ranking, score_type), reverse=high_to_low)
 
-        # print:
-        for source in contenders:
-            print(f"{source.name} {source.ranking.str()}")
-        for source in disqualified:
-            print(f"{source.name} {source.ranking.str()}")
+        suggestion = Suggestion(contenders, sensitivity, score_type)
+
+        if verbose is True:
+            print("Suggestions calculated.")
+            for source in suggestion.sources:
+                print(f"{source.name} {score_type}: {getattr(source.ranking, score_type)}")
+
+        return suggestion
 
 
 class Score:
@@ -449,7 +455,19 @@ class Source:
             print(f"{self.name} updated.")
 
 
-def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> None:
+class Suggestion:
+    """ A suggestion. """
+
+    def __init__(self,
+                 sources: List[Source],
+                 sensitivity: int,
+                 score_type: str) -> None:
+        self.sources = sources
+        self.sensitivity = sensitivity
+        self.score_type = score_type
+
+
+def main(preload: bool = False, remote: bool = True, sensitivity: int = 1, score_type: str = "recall") -> None:
     """ Main function. """
 
     store = Store("owcm_index.xlsx")
@@ -458,15 +476,15 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> No
     if preload is True:
         store.preload(minimum=8246)
 
-    store.fetch_and_update(remote, maximum=8246, verbose=True)
+    store.fetch_and_update(remote, maximum=600, verbose=True)
 
     store.update_rankings(sensitivity=sensitivity, verbose=True)
 
-    print("Calculating suggestions...")
-    store.make_suggestion("recall")
+    store.make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=True)
 
 
 main(preload=False, remote=False, sensitivity=1)
 
 # TODO: implement measure for noise
 # TODO: refactor all class methods into public and private
+# TODO: split results from aggregators into vocabularies
