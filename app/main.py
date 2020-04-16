@@ -13,11 +13,6 @@ import Levenshtein
 import requests
 import urllib.parse
 
-""" BARTOC FAST query module
-
-This module sends queries to BARTOC FAST API and retrieves the results.
-"""
-
 FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api?"
 
 FAST_SOURCES = ["LuSTRE",
@@ -242,12 +237,12 @@ class Store:
             print("Updating source rankings...")
 
         for source in self._sources:
-            source.update_ranking(self, sensitivity)
+            source.update_ranking(self, sensitivity, verbose)
 
         if verbose is True:
             print("Source rankings updated.")
 
-    def make_suggestion(self, score_type: str = "score_average"): # TODO: rather print_suggestion(...)
+    def make_suggestion(self, score_type: str = "score_average"):  # TODO: rather print_suggestion(...)
         """ Return sources from best to worst base on score type. """
 
         # fix sorting direction:
@@ -315,8 +310,12 @@ class LevenshteinVector(Vector):
             label_value = result.get(label)
             if label_value is None:
                 continue
-            distance = Levenshtein.distance(searchword, label_value)
-            scores.append(distance)
+            distances = []
+            # check if label is multilingual:
+            for language_value in label_value.split(";"):
+                # clean searchword and language_value before measuring distance:
+                distances.append(Levenshtein.distance(searchword.lower(), language_value.lower()))
+            scores.append(min(distances))
 
         # catch malformed (= empty labels) results:
         try:
@@ -432,8 +431,11 @@ class Source:
             self.levenshtein_vector = LevenshteinVector()
         self.ranking = ranking
 
-    def update_ranking(self, store: Store, sensitivity: int):
+    def update_ranking(self, store: Store, sensitivity: int, verbose: bool = False):
         """ Update the sources ranking. """
+
+        if verbose is True:
+            print(f"Updating {self.name}...")
 
         best_vector = Analysis.make_best_vector(self.levenshtein_vector, sensitivity)
 
@@ -443,6 +445,9 @@ class Source:
         self.ranking.score_coverage = Analysis.make_score_coverage(best_vector)
         self.ranking.recall = Analysis.make_recall(len(store.scheme.concepts), self.ranking.score_coverage)
 
+        if verbose is True:
+            print(f"{self.name} updated.")
+
 
 def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> None:
     """ Main function. """
@@ -451,9 +456,9 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> No
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
-        store.preload(minimum=5600)
+        store.preload(minimum=8246)
 
-    store.fetch_and_update(remote, maximum=5600, verbose=True)
+    store.fetch_and_update(remote, maximum=8246, verbose=True)
 
     store.update_rankings(sensitivity=sensitivity, verbose=True)
 
@@ -463,6 +468,5 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 5) -> No
 
 main(preload=False, remote=False, sensitivity=1)
 
-# TODO: implement multilanguage result parser
 # TODO: implement measure for noise
 # TODO: refactor all class methods into public and private
