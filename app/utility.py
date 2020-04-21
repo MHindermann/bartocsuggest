@@ -42,11 +42,12 @@ class Utility:
         scheme = ConceptScheme()
         for worksheet in workbook:
             for row in worksheet.iter_rows(min_row=1, min_col=1, max_col=1, values_only=True):
-                if row is None:
+                if row[0] is None:
                     continue
                 else:
                     concept = Concept(preflabel=LanguageMap({"en": row[0]}))  # TODO: automate language detection
                     scheme.concepts.append(concept)
+
         return scheme
 
     @classmethod
