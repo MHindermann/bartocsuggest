@@ -15,30 +15,6 @@ import urllib.parse
 
 FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api?"
 
-FAST_SOURCES = ["LuSTRE",
-                "GettyULAN",
-                "GettyAAT",
-                "GettyTGN",
-                "AgroVoc",
-                "Bartoc",
-                "data.ub.uio.no",
-                "Finto",
-                "Legilux",
-                "MIMO",
-                "UNESCO",
-                "OZCAR-Theia",
-                "GACS",
-                "51.15.194.251",
-                "UAAV",
-                "HTW-Chur",
-                "FORTH",
-                "Irstea",
-                "DemoVoc",
-                "ScoLOMFR",
-                "lobid-gnd",
-                "Research-Vocabularies-Australia",
-                "Loterre"]
-
 
 class Query:
     """ A BARTOC FAST query """
@@ -56,8 +32,10 @@ class Query:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
         self._response = _response
 
-    def send(self) -> None:
-        """ Send query as HTTP request to BARTOC FAST API """
+    def _send(self) -> None:
+        """ Send query as HTTP request to BARTOC FAST API.
+
+         Response is saved in _response."""
 
         payload = self.get_payload()
         try:
@@ -65,10 +43,48 @@ class Query:
         except requests.exceptions.ConnectionError:
             print(f"requests.exceptions.ConnectionError! Trying again in 5 seconds...")
             sleep(5)
-            self.send()
+            self._send()
 
-    def get_payload(self):
-        """ Return the payload (parameters passed in URL) of the query """
+    def _update_sources(self, store: Store) -> None:
+        """ Update score vectors of sources based on query response. """
+
+        # extract results from response:
+        response = self.get_response()
+        results = response.get("results")
+
+        if results is None:
+            return None
+
+        for result in results:
+            # get source, add if new:
+            name = self._result2name(result)
+            source = store.get_source(name)
+            if source is None:
+                source = Source(name)
+                store.add_source(source)
+            # update source's score vector:
+            searchword = self.searchword
+            source.levenshtein_vector.update_score(searchword, result)
+
+    def _result2name(self, result: Dict) -> str:
+        """ Extract a source name from a result based on its URI. """
+
+        uri = result.get("uri")
+        parsed_uri = urllib.parse.urlparse(uri)
+
+        # Getty:
+        if parsed_uri.netloc == "vocab.getty.edu":
+            path = parsed_uri.path
+            components = path.split("/")
+            identifier = components[1]
+            return f"{parsed_uri.netloc}/{identifier}"
+
+        # TODO: add clauses for specific sources such as Bartoc
+
+        return parsed_uri.netloc
+
+    def get_payload(self) -> Dict:
+        """ Return the payload (parameters passed in URL) of the query. """
 
         if self.duplicates is True:
             duplicates = "on"
@@ -83,11 +99,11 @@ class Query:
         return payload
 
     def get_response(self, verbose: int = 0) -> Dict:
-        """ Return the query response """
+        """ Return the query response. """
 
         # fetch response if not available:
         if self._response is None:
-            self.send()
+            self._send()
             if verbose == 1:
                 print(self._response.text)
             return self._response.json()
@@ -99,24 +115,6 @@ class Query:
         # response is preloaded:
         else:
             return self._response
-
-    def update_sources(self, store: Store) -> None:
-        """ Update score vectors of sources based on query response """
-
-        # extract results from response:
-        response = self.get_response()
-        results = response.get("results")
-
-        if results is None:
-            return None
-
-        for result in results:
-            # get source:
-            name = result.get("source")
-            source = store.get_source(name)
-            # update score vector:
-            searchword = self.searchword
-            source.levenshtein_vector.update_score(searchword, result)
 
     @classmethod
     def make_query_from_json(cls, json_object: Dict) -> Optional[Query]:
@@ -153,16 +151,13 @@ class Store:
                  sources: List[Source] = None) -> None:
         self.scheme = Utility.load_file(filename)
         if sources is None:
-            self._sources = self.make_sources()
+            self._sources = []
 
-    def make_sources(self):
-        """ Return initialized sources from constant. """
+    def add_source(self, source: Source) -> None:
+        """ Add a source to the store. """
 
-        sources = []
-        for name in FAST_SOURCES:
-            sources.append(Source(name))  # TODO: add uri, etc.
-
-        return sources
+        # TODO: check for duplicate source before adding
+        self._sources.append(source)
 
     def get_source(self, name: str) -> Optional[Source]:
         """ Return source by name. """
@@ -210,7 +205,7 @@ class Store:
                 try:
                     json_object = Utility.load_json(counter)
                     query = Query.make_query_from_json(json_object)
-                    query.update_sources(self)
+                    query._update_sources(self)
                     counter += 1
                 except FileNotFoundError:
                     break
@@ -224,7 +219,7 @@ class Store:
                 if verbose is True:
                     print(f"Concept being fetched is {searchword}")
                 query = Query(searchword)
-                query.update_sources(self)
+                query._update_sources(self)
                 counter += 1
 
         if verbose is True:
@@ -380,7 +375,7 @@ class Analysis:
         if score_sum is None:
             return None
         else:
-            return round(score_sum/len(vector.get_vector()), 2)
+            return round(score_sum / len(vector.get_vector()), 2)
 
     @classmethod
     def make_score_coverage(cls, vector: LevenshteinVector) -> Optional[int]:
@@ -420,7 +415,7 @@ class Analysis:
          See https://en.wikipedia.org/wiki/Precision_and_recall#Recall """
 
         try:
-            return retrieved/relevant
+            return retrieved / relevant
         except (TypeError, AttributeError):
             return None
 
@@ -474,9 +469,9 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 1, score
     print(f"{len(store.scheme.concepts)} concepts in {store.scheme}")
 
     if preload is True:
-        store.preload(minimum=8246)
+        store.preload(minimum=10173)
 
-    store.fetch_and_update(remote, maximum=600, verbose=True)
+    store.fetch_and_update(remote, maximum=5000, verbose=True)
 
     store.update_rankings(sensitivity=sensitivity, verbose=True)
 
@@ -487,4 +482,4 @@ main(preload=False, remote=False, sensitivity=1)
 
 # TODO: implement measure for noise
 # TODO: refactor all class methods into public and private
-# TODO: split results from aggregators into vocabularies
+# TODO: split results from aggregators into vocabularies (e.g., BARTOC)
