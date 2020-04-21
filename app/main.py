@@ -67,21 +67,30 @@ class Query:
             source.levenshtein_vector.update_score(searchword, result)
 
     def _result2name(self, result: Dict) -> str:
-        """ Extract a source name from a result based on its URI. """
+        """ Return source name based on result. """
+
+        # define aggregated sources:
+        aggregators = ["vocab.getty.edu",
+                       "bartoc-skosmos.unibas.ch",
+                       "http://data.ub.uio.no"]
 
         uri = result.get("uri")
         parsed_uri = urllib.parse.urlparse(uri)
 
-        # Getty:
-        if parsed_uri.netloc == "vocab.getty.edu":
-            path = parsed_uri.path
-            components = path.split("/")
-            identifier = components[1]
-            return f"{parsed_uri.netloc}/{identifier}"
+        # only aggregated sources need splitting:
+        if parsed_uri.netloc in aggregators:
+            return self._uri2name(parsed_uri)
+        else:
+            return parsed_uri.netloc
 
-        # TODO: add clauses for specific sources such as Bartoc
+    def _uri2name(self, parsed_uri: urllib.parse.ParseResult) -> str:
+        """ Return source name based on parsed URI. """
 
-        return parsed_uri.netloc
+        path = parsed_uri.path
+        components = path.split("/")
+        identifier = components[1]
+
+        return f"{parsed_uri.netloc}/{identifier}"
 
     def get_payload(self) -> Dict:
         """ Return the payload (parameters passed in URL) of the query. """
@@ -471,7 +480,7 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 1, score
     if preload is True:
         store.preload(minimum=10173)
 
-    store.fetch_and_update(remote, maximum=5000, verbose=True)
+    store.fetch_and_update(remote, maximum=10173, verbose=True)
 
     store.update_rankings(sensitivity=sensitivity, verbose=True)
 
@@ -482,4 +491,3 @@ main(preload=False, remote=False, sensitivity=1)
 
 # TODO: implement measure for noise
 # TODO: refactor all class methods into public and private
-# TODO: split results from aggregators into vocabularies (e.g., BARTOC)
