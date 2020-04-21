@@ -69,28 +69,48 @@ class Query:
     def _result2name(self, result: Dict) -> str:
         """ Return source name based on result. """
 
-        # define aggregated sources:
-        aggregators = ["vocab.getty.edu",
-                       "bartoc-skosmos.unibas.ch",
-                       "http://data.ub.uio.no"]
+        # TODO: add all relevant sources
+        # define (categories of) aggregated sources:
+        agg_1 = ["bartoc-skosmos.unibas.ch",
+                 "data.ub.uio.no",
+                 "vocab.getty.edu"]
+        agg_2 = ["isl.ics.forth.gr,"
+                 "linkeddata.ge.imati.cnr.it",
+                 "www.yso.fi"]
+        agg_5 = ["vocabs.ands.org.au"]
 
         uri = result.get("uri")
         parsed_uri = urllib.parse.urlparse(uri)
 
         # only aggregated sources need splitting:
-        if parsed_uri.netloc in aggregators:
-            return self._uri2name(parsed_uri)
+        if parsed_uri.netloc in agg_1:
+            return self._uri2name(parsed_uri, n=1)
+        elif parsed_uri.netloc in agg_2:
+            return self._uri2name(parsed_uri, n=2)
+        elif parsed_uri.netloc in agg_5:
+            return self._uri2name(parsed_uri, n=5)
         else:
             return parsed_uri.netloc
 
-    def _uri2name(self, parsed_uri: urllib.parse.ParseResult) -> str:
-        """ Return source name based on parsed URI. """
+    def _uri2name(self, parsed_uri: urllib.parse.ParseResult, n: int = 1) -> str:
+        """ Return source name based on parsed URI.
+
+         n is the number of identifying components on the path."""
 
         path = parsed_uri.path
         components = path.split("/")
-        identifier = components[1]
+        name = parsed_uri.netloc
 
-        return f"{parsed_uri.netloc}/{identifier}"
+        i = 1
+        while True:
+            if i > n:
+                break
+            else:
+                identifier = components[i]
+                name = name + f"/{identifier}"
+                i += 1
+
+        return name
 
     def get_payload(self) -> Dict:
         """ Return the payload (parameters passed in URL) of the query. """
