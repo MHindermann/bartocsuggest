@@ -1,4 +1,4 @@
-""" test_script.py """
+""" examples_script.py """
 
 from __future__ import annotations
 from typing import Union
