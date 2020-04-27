@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Optional, Set, List
 
 
-class LanguageMap:
+class _LanguageMap:
     """ http://gbv.github.io/jskos/jskos.html#language-map """
 
     def __init__(self, _mapping: dict) -> None:
@@ -23,7 +23,7 @@ class LanguageMap:
         return self._mapping.get(language)
 
 
-class Resource:
+class _Resource:
     """ http://gbv.github.io/jskos/jskos.html#resource """
 
     def __init__(self,
@@ -37,7 +37,7 @@ class Resource:
             self.context = "https://gbv.github.io/jskos/context.json"
 
 
-class Item(Resource):
+class _Item(_Resource):
     """ http://gbv.github.io/jskos/jskos.html#item """
 
     def __init__(self,
@@ -45,7 +45,7 @@ class Item(Resource):
                  form: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 preflabel: LanguageMap = None
+                 preflabel: _LanguageMap = None
                  ) -> None:
         if url is None:
             self.url = uri
@@ -53,7 +53,7 @@ class Item(Resource):
         super().__init__(uri, form, context)
 
 
-class Concept(Item):
+class _Concept(_Item):
     """ http://gbv.github.io/jskos/jskos.html#concept """
 
     def __init__(self,
@@ -61,14 +61,14 @@ class Concept(Item):
                  form: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 preflabel: LanguageMap = None,
+                 preflabel: _LanguageMap = None,
                  inscheme: set = None
                  ) -> None:
         self.inscheme = inscheme
         super().__init__(uri, form, context, url, preflabel)
 
 
-class ConceptScheme(Item):
+class _ConceptScheme(_Item):
     """ http://gbv.github.io/jskos/jskos.html#concept-schemes """
 
     def __init__(self,
@@ -76,8 +76,8 @@ class ConceptScheme(Item):
                  form: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 preflabel: LanguageMap = None,
-                 concepts: List[Concept] = None
+                 preflabel: _LanguageMap = None,
+                 concepts: List[_Concept] = None
                  ) -> None:
         if concepts is None:
             self.concepts = []
