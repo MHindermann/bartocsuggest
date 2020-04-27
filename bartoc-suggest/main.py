@@ -507,7 +507,7 @@ def main(preload: bool = False, remote: bool = True, sensitivity: int = 1, score
     store.make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=True)
 
 
-main(preload=False, remote=False, sensitivity=1)
+#main(preload=False, remote=False, sensitivity=1)
 
 # TODO: implement measure for noise
 # TODO: refactor all class methods into public and private
