@@ -57,4 +57,17 @@ def test_owcm():
     main(data=mywords, preload_folder=folder, preload=False, remote=False)
 
 
-test_owcm()
+def test_annif():
+    """ Annif high level test. """
+
+    # Annif YSO + https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0232391
+    # mywords = ["viruses", "bioinformatics", "molecular biology", "genetics", "sequence analysis"]
+
+    # Annif Wikidata + https://edoc.unibas.ch/37670/
+    mywords = ["auction", "market", "free market", "marketing mix", "marketing", "market economy", "black market",
+               "perfect competition", "capitalism", "stock market"]
+    # don't load responses for data into preload_folder, make suggestion from remote:
+    main(data=mywords)
+
+
+test_annif()
