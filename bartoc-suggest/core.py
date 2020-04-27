@@ -343,7 +343,7 @@ class Bartoc:
                 sensitivity: int = 1,
                 score_type: str = "recall",
                 remote: bool = True,
-                maximum_responses: int = 5,
+                maximum_responses: int = 100000,
                 verbose: bool = False) -> None:
         """ Suggest vocabularies.
 

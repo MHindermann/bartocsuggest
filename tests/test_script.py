@@ -13,7 +13,7 @@ def main(data: Union[str, list],
          sensitivity: int = 0,
          score_type: str = "recall",
          remote: bool = True,
-         maximum_responses: int = 5,
+         maximum_responses: int = 100000,
          verbose: bool = True) -> None:
     """ Main function. """
 
@@ -26,22 +26,35 @@ def main(data: Union[str, list],
 
 
 DIR = path.dirname(path.abspath(__file__))
-folder = path.join(DIR, "preload/")
 
-mywords = ["telefon", "wurst"]
 
-# don't load responses for data into preload_folder, make suggestion from remote:
-# main(data=mywords)
+def test_basic():
+    """ Basic high level test. """
 
-# load responses for data into preload_folder, make suggestion from remote:
-# main(data=mywords, preload_folder=folder, preload=True)
+    folder = path.join(DIR, "preload/")
+    mywords = ["telefon", "wurst"]
 
-# load responses for data into preload_folder, make suggestion preload folder:
-main(data=mywords, preload_folder=folder, preload=True, remote=False)
+    # don't load responses for data into preload_folder, make suggestion from remote:
+    main(data=mywords)
 
-# don't load responses for data into preload_folder, make suggestion from preload folder:
-# main(data=mywords, preload_folder=folder, preload=False, remote=False)
+    # load responses for data into preload_folder, make suggestion from remote:
+    main(data=mywords, preload_folder=folder, preload=True)
 
-#main(preload=False, remote=False, sensitivity=1)
+    # load responses for data into preload_folder, make suggestion preload folder:
+    main(data=mywords, preload_folder=folder, preload=True, remote=False)
 
-#   store = Store("owcm_index.xlsx")
+    # don't load responses for data into preload_folder, make suggestion from preload folder:
+    main(data=mywords, preload_folder=folder, preload=False, remote=False)
+
+
+def test_owcm():
+    """ OWCM high level test."""
+
+    folder = path.join(DIR, "preload_owcm/")
+    mywords = path.join(DIR, "input_owcm.xlsx")
+
+    # don't load responses for data into preload_folder, make suggestion from preload folder:
+    main(data=mywords, preload_folder=folder, preload=False, remote=False)
+
+
+test_owcm()

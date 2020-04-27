@@ -21,7 +21,6 @@ class _Utility:
         filename: MUST use complete file path. """
 
         # stop if file does not exist
-        ###!!!! filename = path.join(DIR, "input/" + filename)
         if path.exists(filename) is False:
             print(f"ERROR: File {filename} does not exist!")
             return None
