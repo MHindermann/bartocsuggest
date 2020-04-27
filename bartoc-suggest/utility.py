@@ -6,18 +6,16 @@ from __future__ import annotations
 from typing import Optional, Dict
 from os import path
 from openpyxl import load_workbook
-from jskos import Concept, ConceptScheme, LanguageMap
+from jskos import _Concept, _ConceptScheme, _LanguageMap
 
 import json
 
-DIR = path.dirname(path.abspath(__file__))
 
-
-class Utility:
+class _Utility:
     """ Utility functions """
 
     @classmethod
-    def load_file(cls, filename: str) -> Optional[ConceptScheme]:
+    def load_file(cls, filename: str) -> Optional[_ConceptScheme]:
         """ Load a file.
 
         filename: MUST use complete file path. """
@@ -39,27 +37,27 @@ class Utility:
             pass
 
     @classmethod
-    def xlsx2jskos(cls, workbook) -> ConceptScheme:
+    def xlsx2jskos(cls, workbook) -> _ConceptScheme:
         """ Transform XLSX to JSKOS """
 
-        scheme = ConceptScheme()
+        scheme = _ConceptScheme()
         for worksheet in workbook:
             for row in worksheet.iter_rows(min_row=1, min_col=1, max_col=1, values_only=True):
                 if row[0] is None:
                     continue
                 else:
-                    concept = Concept(preflabel=LanguageMap({"en": row[0]}))  # TODO: automate language detection
+                    concept = _Concept(preflabel=_LanguageMap({"en": row[0]}))  # TODO: automate language detection
                     scheme.concepts.append(concept)
 
         return scheme
 
     @classmethod
-    def list2jskos(cls, input_list: list) -> ConceptScheme:
+    def list2jskos(cls, input_list: list) -> _ConceptScheme:
         """ Transform list to JSKOS """
 
-        scheme = ConceptScheme()
+        scheme = _ConceptScheme()
         for item in input_list:
-            concept = Concept(preflabel=LanguageMap({"en": item}))  # TODO: automate language detection
+            concept = _Concept(preflabel=_LanguageMap({"en": item}))  # TODO: automate language detection
             scheme.concepts.append(concept)
 
         return scheme

@@ -1,28 +1,35 @@
-from __future__ import annotations
-from typing import List, Optional, Dict, Union
+""" test_script.py """
 
-from core import Store
+from __future__ import annotations
+from typing import Union
+from os import path
+
+from core import Bartoc
 
 
 def main(data: Union[str, list],
          preload_folder: str = None,
          preload: bool = False,
+         sensitivity: int = 0,
+         score_type: str = "recall",
          remote: bool = True,
-         sensitivity: int = 1,
-         score_type: str = "recall") -> None:
-    """ Test script. """
+         maximum_responses: int = 5,
+         verbose: bool = True) -> None:
+    """ Main function. """
 
-    store = Store(data, preload_folder)
+    bartoc = Bartoc(data, preload_folder)
 
     if preload is True:
-        store.preload()
+        bartoc.preload()
 
-    store._fetch_and_update(remote, maximum=10173, verbose=True)
+    bartoc.suggest(sensitivity, score_type, remote, maximum_responses, verbose)
 
-    store.update_rankings(sensitivity=sensitivity, verbose=True)
 
-    store.make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=True)
+DIR = path.dirname(path.abspath(__file__))
 
+data = ["telefon", "wurst"]
+
+main(data)
 
 #main(preload=False, remote=False, sensitivity=1)
 

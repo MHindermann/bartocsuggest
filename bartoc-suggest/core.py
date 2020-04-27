@@ -7,14 +7,14 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Union
 from time import sleep
 
-from utility import Utility
-from jskos import ConceptScheme
+from utility import _Utility
+from jskos import _ConceptScheme
 
 import Levenshtein
 import requests
 import urllib.parse
 
-FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api?"
+FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api"
 
 
 class _Query:
@@ -46,7 +46,7 @@ class _Query:
             sleep(5)
             self._send()
 
-    def update_sources(self, store: Store) -> None:
+    def update_sources(self, store: Bartoc) -> None:
         """ Update score vectors of sources based on query response. """
 
         # extract results from response:
@@ -59,10 +59,10 @@ class _Query:
         for result in results:
             # get source, add if new:
             name = self._result2name(result)
-            source = store.get_source(name)
+            source = store._get_source(name)
             if source is None:
                 source = _Source(name)
-                store.add_source(source)
+                store._add_source(source)
             # update source's score vector:
             searchword = self.searchword
             source.levenshtein_vector.update_score(searchword, result)
@@ -173,41 +173,42 @@ class _Query:
         return query
 
 
-class Store:
-    """ Stores everything! """
+class Bartoc:
+    """ Vocabulary suggestions using the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
+
+     data:
+
+     preload_folder: """
 
     def __init__(self,
                  data: str,
-                 preload_folder: str = None,
-                 sources: List[_Source] = None) -> None:
+                 preload_folder: str = None) -> None:
         self._scheme = self._set_input(data)
-
         self._preload_folder = preload_folder
-        if sources is None:
-            self._sources = []
+        self._sources = []
         self._input_file = None
         self._preload_folder = None
 
-    def _set_input(self, data: Union[list, str]) -> ConceptScheme:
+    def _set_input(self, data: Union[list, str]) -> _ConceptScheme:
         """ Set input data as Concept Scheme.
 
         data: either a list, or a filename (MUST use complete filepath). """
 
         if type(data) is list:
-            scheme = Utility.list2jskos(data)
+            scheme = _Utility.list2jskos(data)
         else:
-            scheme = Utility.load_file(data)
+            scheme = _Utility.load_file(data)
 
-        print(f"{data} loaded successfully. {len(self._scheme.concepts)} concepts in {self._scheme}")
+        print(f"{data} loaded successfully. {len(scheme.concepts)} concepts in {scheme}")
         return scheme
 
-    def add_source(self, source: _Source) -> None:
+    def _add_source(self, source: _Source) -> None:
         """ Add a source to the store. """
 
         # TODO: check for duplicate source before adding
         self._sources.append(source)
 
-    def get_source(self, name: str) -> Optional[_Source]:
+    def _get_source(self, name: str) -> Optional[_Source]:
         """ Return source by name. """
 
         for source in self._sources:
@@ -216,7 +217,98 @@ class Store:
 
         return None
 
-    def preload(self, maximum: int = 100000, minimum: int = 0) -> None:
+    def _fetch_and_update(self, remote: bool = True, maximum: int = 100000, verbose: bool = False) -> None:
+        """
+        Fetch query responses and update sources.
+
+        remote: toggle fetching responses from BARTOC FAST or preload folder.
+
+        maximum: the maximum number of responses fetched.
+
+        verbose: toggle status updates along the way.
+        """
+
+        if verbose is True:
+            print(f"Querying BARTOC FAST...")
+
+        counter = 0
+
+        # fetch from preload:
+        if remote is False:
+            while True:
+                if counter > maximum:  # debug
+                    break
+                try:
+                    json_object = _Utility.load_json(self._preload_folder, counter)
+                    query = _Query.make_query_from_json(json_object)
+                    query.update_sources(self)
+                    counter += 1
+                except FileNotFoundError:
+                    break
+
+        # fetch from remote:
+        else:
+            for concept in self._scheme.concepts:
+                if counter > maximum:  # debug
+                    break
+                searchword = concept.preflabel.get_value("en")  # TODO: generalize this
+                if verbose is True:
+                    print(f"Concept being fetched is {searchword}")
+                query = _Query(searchword)
+                query.update_sources(self)
+                counter += 1
+
+        if verbose is True:
+            print("Responses collected.")
+
+    def _update_rankings(self, sensitivity: int, verbose: bool = False):
+        """ Update the sources' rankings. """
+
+        if verbose is True:
+            print("Updating source rankings...")
+
+        for source in self._sources:
+            source.update_ranking(self, sensitivity, verbose)
+
+        if verbose is True:
+            print("Source rankings updated.")
+
+    def _make_suggestion(self, sensitivity: int, score_type: str, verbose: bool = False) -> _Suggestion:
+        """ Return sources from best to worst base on score type. """
+
+        if verbose is True:
+            print("Calculating suggestions...")
+
+        # determine sorting direction:
+        high_to_low = False
+        if score_type is "recall":
+            high_to_low = True
+
+        # sort sources by score type:
+        contenders = []
+        disqualified = []
+        for source in self._sources:
+            if getattr(source.ranking, score_type) is None:
+                disqualified.append(source)
+            else:
+                contenders.append(source)
+        contenders.sort(key=lambda x: getattr(x.ranking, score_type), reverse=high_to_low)
+
+        suggestion = _Suggestion(contenders, sensitivity, score_type)
+
+        if verbose is True:
+            print(f"Suggestions calculated.")
+            print("---RESULTS---------------------------------------------------------------------")
+            print(f"Sensitivity is {sensitivity}. From best to worst (sources with no results are excluded):")
+            for source in suggestion.sources:
+                print(f"{source.name} {score_type}: {getattr(source.ranking, score_type)}")
+            print("---RESULTS END-----------------------------------------------------------------")
+
+        return suggestion
+
+    def preload(self,
+                maximum: int = 100000,
+                minimum: int = 0) -> None:
         """
         Save the concept scheme's query responses to the preload folder.
 
@@ -243,100 +335,33 @@ class Store:
             searchword = concept.preflabel.get_value("en")
             query = _Query(searchword)
             response = query.get_response()
-            Utility.save_json(response, self._preload_folder, counter)
+            _Utility.save_json(response, self._preload_folder, counter)
             counter += 1
 
         print(f"{minimum + 1} query responses preloaded")
 
-    def _fetch_and_update(self, remote: bool = True, maximum: int = 100000, verbose: bool = False) -> None:
+    def suggest(self,
+                sensitivity: int = 1,
+                score_type: str = "recall",
+                remote: bool = True,
+                maximum_responses: int = 5,
+                verbose: bool = False) -> None:
+        """ Suggest vocabularies .
+
+        sensitivity:
+
+        score_type:
+
+        remote:
+
+        maximum_responses:
+
+        verbose:
         """
-        Fetch query responses and update sources.
-
-        remote: toggle fetching responses from BARTOC FAST or preload folder.
-
-        maximum: the maximum number of responses fetched.
-
-        verbose: toggle status updates along the way.
-        """
-
-        if verbose is True:
-            print(f"Querying BARTOC FAST...")
-
-        counter = 0
-
-        # fetch from preload:
-        if remote is False:
-            while True:
-                if counter > maximum:  # debug
-                    break
-                try:
-                    json_object = Utility.load_json(self._preload_folder, counter)
-                    query = _Query.make_query_from_json(json_object)
-                    query.update_sources(self)
-                    counter += 1
-                except FileNotFoundError:
-                    break
-
-        # fetch from remote:
-        else:
-            for concept in self._scheme.concepts:
-                if counter > maximum:  # debug
-                    break
-                searchword = concept.preflabel.get_value("en")  # TODO: generalize this
-                if verbose is True:
-                    print(f"Concept being fetched is {searchword}")
-                query = _Query(searchword)
-                query.update_sources(self)
-                counter += 1
-
-        if verbose is True:
-            print("Responses collected.")
-
-    def update_rankings(self, sensitivity: int, verbose: bool = False):
-        """ Update the sources' rankings. """
-
-        if verbose is True:
-            print("Updating source rankings...")
-
-        for source in self._sources:
-            source.update_ranking(self, sensitivity, verbose)
-
-        if verbose is True:
-            print("Source rankings updated.")
-
-    def make_suggestion(self, sensitivity: int, score_type: str, verbose: bool = False) -> _Suggestion:
-        """ Return sources from best to worst base on score type. """
-
-        if verbose is True:
-            print("Calculating suggestions...")
-
-        # determine sorting direction:
-        high_to_low = False
-        if score_type is "recall":
-            high_to_low = True
-
-        # sort sources by score type:
-        contenders = []
-        disqualified = []
-        for source in self._sources:
-            if getattr(source.ranking, score_type) is None:
-                disqualified.append(source)
-            else:
-                contenders.append(source)
-        contenders.sort(key=lambda x: getattr(x.ranking, score_type), reverse=high_to_low)
-
-        suggestion = _Suggestion(contenders, sensitivity, score_type)
-
-        if verbose is True:
-            print("Suggestions calculated.")
-            for source in suggestion.sources:
-                print(f"{source.name} {score_type}: {getattr(source.ranking, score_type)}")
-
-        return suggestion
-
-    def suggest(self, remote: bool = True, maximum_responses: int = 5, verbose: bool = False):
         self._fetch_and_update(remote, maximum_responses, verbose)
-        pass
+        self._update_rankings(sensitivity, verbose)
+        self._make_suggestion(sensitivity, score_type, verbose)
+
 
 class _Score:
     """ A score. """
@@ -502,7 +527,7 @@ class _Source:
             self.levenshtein_vector = _LevenshteinVector()
         self.ranking = ranking
 
-    def update_ranking(self, store: Store, sensitivity: int, verbose: bool = False):
+    def update_ranking(self, store: Bartoc, sensitivity: int, verbose: bool = False):
         """ Update the sources ranking. """
 
         if verbose is True:
