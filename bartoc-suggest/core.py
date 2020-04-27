@@ -187,7 +187,6 @@ class Bartoc:
         self._preload_folder = preload_folder
         self._sources = []
         self._input_file = None
-        self._preload_folder = None
 
     def _set_input(self, data: Union[list, str]) -> _ConceptScheme:
         """ Set input data as Concept Scheme.
@@ -319,7 +318,7 @@ class Bartoc:
 
         if self._preload_folder is None:
             # TODO: check if folder exists
-            print("ERROR: No preload folder specified! Specify preload folder before calling Store.preload.")
+            print("ERROR: No preload folder specified! Specify preload folder before calling Bartoc.preload!")
             return None
 
         counter = 0
@@ -338,7 +337,7 @@ class Bartoc:
             _Utility.save_json(response, self._preload_folder, counter)
             counter += 1
 
-        print(f"{minimum + 1} query responses preloaded")
+        print(f"{(counter - minimum)} query responses preloaded")
 
     def suggest(self,
                 sensitivity: int = 1,
@@ -346,7 +345,7 @@ class Bartoc:
                 remote: bool = True,
                 maximum_responses: int = 5,
                 verbose: bool = False) -> None:
-        """ Suggest vocabularies .
+        """ Suggest vocabularies.
 
         sensitivity:
 

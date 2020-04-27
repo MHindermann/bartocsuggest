@@ -26,10 +26,21 @@ def main(data: Union[str, list],
 
 
 DIR = path.dirname(path.abspath(__file__))
+folder = path.join(DIR, "preload/")
 
-data = ["telefon", "wurst"]
+mywords = ["telefon", "wurst"]
 
-main(data)
+# don't load responses for data into preload_folder, make suggestion from remote:
+# main(data=mywords)
+
+# load responses for data into preload_folder, make suggestion from remote:
+# main(data=mywords, preload_folder=folder, preload=True)
+
+# load responses for data into preload_folder, make suggestion preload folder:
+main(data=mywords, preload_folder=folder, preload=True, remote=False)
+
+# don't load responses for data into preload_folder, make suggestion from preload folder:
+# main(data=mywords, preload_folder=folder, preload=False, remote=False)
 
 #main(preload=False, remote=False, sensitivity=1)
 
