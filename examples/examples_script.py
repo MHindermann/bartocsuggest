@@ -4,8 +4,7 @@ from __future__ import annotations
 from typing import Union
 from os import path
 
-# TODO: fix import
-from core import Bartoc
+import bartocsuggest
 
 
 def main(data: Union[str, list],
@@ -18,7 +17,7 @@ def main(data: Union[str, list],
          verbose: bool = True) -> None:
     """ Main function. """
 
-    bartoc = Bartoc(data, preload_folder)
+    bartoc = bartocsuggest.Bartoc(data, preload_folder)
 
     if preload is True:
         bartoc.preload()
