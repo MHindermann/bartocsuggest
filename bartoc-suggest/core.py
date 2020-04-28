@@ -297,11 +297,12 @@ class Bartoc:
 
         if verbose is True:
             print(f"Suggestions calculated.")
-            print("---RESULTS---------------------------------------------------------------------")
-            print(f"Sensitivity is {sensitivity}. From best to worst (sources with no results are excluded):")
+            print("---RESULTS--------------------------------------------------------------------------------")
+            print(f"{len(suggestion.sources)} results with sensitivity {sensitivity}."
+                  f" From best to worst (sources with no results are excluded):")
             for source in suggestion.sources:
                 print(f"{source.name} {score_type}: {getattr(source.ranking, score_type)}")
-            print("---RESULTS END-----------------------------------------------------------------")
+            print("---RESULTS END----------------------------------------------------------------------------")
 
         return suggestion
 
