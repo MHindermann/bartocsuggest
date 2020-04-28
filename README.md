@@ -63,15 +63,3 @@ Suggest vocabularies based on `scheme`.
 * **Return type**
 
     `None`
-
-
-# Indices and tables
-
-
-* Index
-
-
-* Module Index
-
-
-* Search Page
