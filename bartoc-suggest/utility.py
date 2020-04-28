@@ -6,9 +6,9 @@ from __future__ import annotations
 from typing import Optional, Dict
 from os import path
 from openpyxl import load_workbook
-from jskos import _Concept, _ConceptScheme, _LanguageMap
+from json import dump, load
 
-import json
+from .jskos import _Concept, _ConceptScheme, _LanguageMap
 
 
 class _Utility:
@@ -70,7 +70,7 @@ class _Utility:
         filename = preload_folder + f"query_{number}.json"
 
         with open(filename, "w") as file:
-            json.dump(json_object, file)
+            dump(json_object, file)
 
         print(f"{filename} preloaded")
 
@@ -82,6 +82,6 @@ class _Utility:
 
         with open(filename) as file:
 
-            json_object = json.load(file)
+            json_object = load(file)
 
             return json_object
