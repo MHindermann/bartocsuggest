@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="bartoc-suggest", # Replace with your own username
-    version="0.0.2",
+    version="0.0.3",
     author="Maximilian Hindermann",
     author_email="maximilian.hindermann@unibas.ch",
     description="A vocabulary suggestion tool using the BARTOC FAST API.",
@@ -18,7 +18,6 @@ setuptools.setup(
         "requests",
         "python-Levenshtein-wheels",
         "openpyxl",
-        "json",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
