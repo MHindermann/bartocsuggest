@@ -174,14 +174,14 @@ class _Query:
 
 
 class Bartoc:
-    """ Vocabulary suggestions using the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
+    """ Vocabulary suggestions using the BARTOC FAST API.
 
-     data:
-
-     preload_folder: """
+    :param data: input data (MUST use complete path)
+    :param preload_folder: folder to save preloaded responses in (MUST use complete path), defaults to None
+    """
 
     def __init__(self,
-                 data: str,
+                 data: Union[list, str],
                  preload_folder: str = None) -> None:
         self._scheme = self._set_input(data)
         self._preload_folder = preload_folder
@@ -309,12 +309,10 @@ class Bartoc:
     def preload(self,
                 maximum: int = 100000,
                 minimum: int = 0) -> None:
-        """
-        Save the concept scheme's query responses to the preload folder.
+        """ Save the concept scheme's query responses to the preload folder.
 
-        maximum: stop after this concept.
-
-        minimum: start with this concept.
+        :param maximum: stop with the maximum-th concept, defaults to 100000
+        :param minimum: start with the minimum-th concept, defaults to 0
         """
 
         if self._preload_folder is None:
@@ -346,17 +344,16 @@ class Bartoc:
                 remote: bool = True,
                 maximum_responses: int = 100000,
                 verbose: bool = False) -> None:
-        """ Suggest vocabularies.
 
-        sensitivity:
+        # TODO: score types should be public
+        """ Suggest vocabularies based on :attr:`scheme`.
 
-        score_type:
 
-        remote:
-
-        maximum_responses:
-
-        verbose:
+        :param sensitivity: set the maximum allowed Levenshtein distance between concept and result, defaults to 1
+        :param score_type: set the score type on which the suggestion is beased, defaults to "recall"
+        :param remote: toggle remote BARTOC FAST querying, defaults to True
+        :param maximum_responses: set a maximum number of queries sent resp. responses analyzed, defaults to 100000
+        :param verbose: toggle comments, defaults to False
         """
         self._fetch_and_update(remote, maximum_responses, verbose)
         self._update_rankings(sensitivity, verbose)
