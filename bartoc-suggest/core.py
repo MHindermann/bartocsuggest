@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Union
 from time import sleep
 
-from utility import _Utility
-from jskos import _ConceptScheme
+from .utility import _Utility
+from .jskos import _ConceptScheme
 
 import Levenshtein
 import requests
