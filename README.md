@@ -1,6 +1,6 @@
 # bartocsuggest
 
-A Python module that suggests a vocabularies given a list of words based on the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
+A Python module that suggests vocabularies given a list of words based on the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
 
 ## Installation
 
@@ -56,7 +56,7 @@ session.preload(200-299)
 
 # try out different suggestions:
 session.suggest(remote=False, verbose=True)
-session.suggest(sensitivity=2, remote=False, verbose=True)
+session.suggest(remote=False, sensitivity=2, verbose=True)
 session.suggest(remote=False, score_type="XYZ", verbose=True)
 ```
 

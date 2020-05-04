@@ -22,7 +22,7 @@ def main(data: Union[str, list],
     if preload is True:
         session.preload()
 
-    session.suggest(sensitivity, score_type, remote, maximum_responses, verbose)
+    session.suggest(remote, sensitivity, score_type, maximum_responses, verbose)
 
 
 DIR = path.dirname(path.abspath(__file__))

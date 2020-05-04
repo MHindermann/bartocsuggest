@@ -187,6 +187,67 @@ class _Query:
         return query
 
 
+class ScoreType:
+    """ A score type.
+
+    All score types are relative to a specific vocabulary and a list of words.
+    There are four score type classes: Recall, Coverage, Average, Sum.
+    Use the help method on these classes for more information.
+    """
+    pass
+
+
+class Recall(ScoreType):
+    """ The number of words over a vocabulary's coverage.
+
+    The lower the better (minimum is 1). See https://en.wikipedia.org/wiki/Precision_and_recall#Recall.
+
+    Example:
+
+    Words: [a,b,c]
+
+    Coverage: 2
+
+    Recall: len([a,b,c])/Coverage = 1.5
+    """
+
+
+class Average(ScoreType):
+    """ The average score of a vocabulary's matches.
+
+    The lower the average the better (minimum is 0).
+    The score of a match is defined by the Levenshtein distance between word and match.
+
+    Example:
+
+    Scores: [1,1,4]
+
+    Average: (1+1+4)/3 = 2
+    """
+    pass
+
+
+class Coverage(ScoreType):
+    """ The number of a vocabulary's matches in the list of words.
+
+    [say smthing about senssitivity]
+
+    Example:
+
+    Words: [a,b,c]
+
+    Vocabulary matches: a,c
+
+    Coverage: a,c in [a,b,c] = 2
+    """
+    pass
+
+
+class Sum(ScoreType):
+    """ """
+
+    pass
+
 class Session:
     """ Vocabulary suggestion session using the BARTOC FAST API.
 
@@ -364,19 +425,18 @@ class Session:
             print(f"{(counter - min)} responses preloaded.")
 
     def suggest(self,
-                sensitivity: int = 1,
-                score_type: str = "recall",
                 remote: bool = True,
+                sensitivity: int = 1,
+                score_type: ScoreType = Recall,
                 maximum_responses: int = 100000,
                 verbose: bool = False) -> None:
 
-        # TODO: score types should be public
         # TODO: filter for top x results...
         """ Suggest vocabularies based on :attr:`scheme`.
 
+        :param remote: toggle remote BARTOC FAST querying, defaults to True
         :param sensitivity: set the maximum allowed Levenshtein distance between concept and result, defaults to 1
         :param score_type: set the score type on which the suggestion is based, defaults to "recall"
-        :param remote: toggle remote BARTOC FAST querying, defaults to True
         :param maximum_responses: set a maximum number of queries sent resp. responses analyzed, defaults to 100000
         :param verbose: toggle comments, defaults to False
         """
@@ -384,10 +444,6 @@ class Session:
         self._update_rankings(sensitivity, verbose)
         self._make_suggestion(sensitivity, score_type, verbose)
 
-
-class ScoreType:
-    """ """
-    pass
 
 class _Score:
     """ A score. """
@@ -448,7 +504,7 @@ class _LevenshteinVector(_Vector):
         return _Score(min(scores), searchword)
 
     def update_score(self, searchword: str, result: dict) -> None:
-        """ Update the Levenshtein vector with the Levenshtein score from searchword and result """
+        """ Update the Levenshtein vector with the Levenshtein score from searchword and result. """
 
         score = self.make_score(searchword, result)
         if score is None:
@@ -519,7 +575,7 @@ class _Analysis:
         else:
             searchwords = set(score.searchword for score in initial_vector)
 
-        # choose best score for each seachword:
+        # choose best (=lowest) score for each seachword:
         best_vector = []
         for word in searchwords:
             scores = [score for score in initial_vector if score.searchword == word]
@@ -583,4 +639,4 @@ class _Suggestion:
         self.score_type = score_type
 
 # TODO: implement measure for noise
-# TODO: refactor all class methods into public and private
+
