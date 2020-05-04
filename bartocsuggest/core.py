@@ -17,6 +17,14 @@ import urllib.parse
 FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api"
 
 
+def test(bla: str) -> None:
+    """ A test function
+
+    :param bla: test param
+    """
+    return None
+
+
 class _Query:
     """ A BARTOC FAST query """
 
@@ -46,7 +54,7 @@ class _Query:
             sleep(5)
             self._send()
 
-    def update_sources(self, store: Bartoc) -> None:
+    def update_sources(self, store: Store) -> None:
         """ Update score vectors of sources based on query response. """
 
         # extract results from response:
@@ -173,7 +181,7 @@ class _Query:
         return query
 
 
-class Bartoc:
+class Store:
     """ Vocabulary suggestions using the BARTOC FAST API.
 
     :param data: input data (MUST use complete path)
@@ -191,7 +199,8 @@ class Bartoc:
     def _set_input(self, data: Union[list, str]) -> _ConceptScheme:
         """ Set input data as Concept Scheme.
 
-        data: either a list, or a filename (MUST use complete filepath). """
+        :param data: either a list, or a filename (MUST use complete filepath).
+        """
 
         if type(data) is list:
             scheme = _Utility.list2jskos(data)
@@ -217,14 +226,11 @@ class Bartoc:
         return None
 
     def _fetch_and_update(self, remote: bool = True, maximum: int = 100000, verbose: bool = False) -> None:
-        """
-        Fetch query responses and update sources.
+        """ Fetch query responses and update sources.
 
-        remote: toggle fetching responses from BARTOC FAST or preload folder.
-
-        maximum: the maximum number of responses fetched.
-
-        verbose: toggle status updates along the way.
+        :param remote: toggle fetching responses from BARTOC FAST or preload folder.
+        :param maximum: the maximum number of responses fetched.
+        :param verbose: toggle status updates along the way.
         """
 
         if verbose is True:
@@ -348,9 +354,8 @@ class Bartoc:
         # TODO: score types should be public
         """ Suggest vocabularies based on :attr:`scheme`.
 
-
         :param sensitivity: set the maximum allowed Levenshtein distance between concept and result, defaults to 1
-        :param score_type: set the score type on which the suggestion is beased, defaults to "recall"
+        :param score_type: set the score type on which the suggestion is based, defaults to "recall"
         :param remote: toggle remote BARTOC FAST querying, defaults to True
         :param maximum_responses: set a maximum number of queries sent resp. responses analyzed, defaults to 100000
         :param verbose: toggle comments, defaults to False
@@ -359,6 +364,10 @@ class Bartoc:
         self._update_rankings(sensitivity, verbose)
         self._make_suggestion(sensitivity, score_type, verbose)
 
+
+class ScoreType:
+    """ """
+    pass
 
 class _Score:
     """ A score. """
@@ -524,7 +533,7 @@ class _Source:
             self.levenshtein_vector = _LevenshteinVector()
         self.ranking = ranking
 
-    def update_ranking(self, store: Bartoc, sensitivity: int, verbose: bool = False):
+    def update_ranking(self, store: Store, sensitivity: int, verbose: bool = False):
         """ Update the sources ranking. """
 
         if verbose is True:

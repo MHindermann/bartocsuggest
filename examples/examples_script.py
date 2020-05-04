@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Union
 from os import path
 
-from bartocsuggest.core import Bartoc
+from bartocsuggest.core import Store
 
 
 def main(data: Union[str, list],
@@ -17,12 +17,12 @@ def main(data: Union[str, list],
          verbose: bool = True) -> None:
     """ Main function. """
 
-    bartoc = Bartoc(data, preload_folder)
+    store = Store(data, preload_folder)
 
     if preload is True:
-        bartoc.preload()
+        store.preload()
 
-    bartoc.suggest(sensitivity, score_type, remote, maximum_responses, verbose)
+    store.suggest(sensitivity, score_type, remote, maximum_responses, verbose)
 
 
 DIR = path.dirname(path.abspath(__file__))
