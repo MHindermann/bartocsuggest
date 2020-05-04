@@ -7,15 +7,15 @@ Welcome to bartocsuggest's documentation!
 =========================================
 
 
-.. automodule:: bartocsuggest.core
+.. automodule:: bartocsuggest
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-.. autofunction:: bartocsuggest.core.test
+.. autofunction:: bartocsuggest.test
 
-.. autoclass:: bartocsuggest.core.Suggest
+.. autoclass:: bartocsuggest.Store
    :members:
 
 Indices and tables

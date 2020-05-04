@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Union
 from os import path
 
-from bartocsuggest.core import Store
+from bartocsuggest import Session
 
 
 def main(data: Union[str, list],
@@ -17,16 +17,25 @@ def main(data: Union[str, list],
          verbose: bool = True) -> None:
     """ Main function. """
 
-    store = Store(data, preload_folder)
+    session = Session(data, preload_folder)
 
     if preload is True:
-        store.preload()
+        session.preload()
 
-    store.suggest(sensitivity, score_type, remote, maximum_responses, verbose)
+    session.suggest(sensitivity, score_type, remote, maximum_responses, verbose)
 
 
 DIR = path.dirname(path.abspath(__file__))
 
+
+def test_preload():
+    """ Preload test. """
+
+    folder = path.join(DIR, "prelowqdqwdwsad/")
+    mywords = ["telefon", "wurst"]
+
+    session = Session(mywords, folder)
+    session.preload(verbose=True)
 
 def test_basic():
     """ Basic high level test. """
@@ -40,7 +49,7 @@ def test_basic():
     # load responses for data into preload_folder, make suggestion from remote:
     main(data=mywords, preload_folder=folder, preload=True)
 
-    # load responses for data into preload_folder, make suggestion preload folder:
+    # load responses for data into preload_folder, make suggestion from preload folder:
     main(data=mywords, preload_folder=folder, preload=True, remote=False)
 
     # don't load responses for data into preload_folder, make suggestion from preload folder:
@@ -70,4 +79,4 @@ def test_annif():
     main(data=mywords)
 
 
-test_annif()
+test_preload()
