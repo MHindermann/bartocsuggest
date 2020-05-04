@@ -28,10 +28,19 @@ def main(data: Union[str, list],
 DIR = path.dirname(path.abspath(__file__))
 
 
-def test_preload():
+def test_preload_error():
     """ Preload test. """
 
     folder = path.join(DIR, "prelowqdqwdwsad/")
+    mywords = ["telefon", "wurst"]
+
+    session = Session(mywords, folder)
+    session.preload(verbose=True)
+
+def test_preload():
+    """ Preload test. """
+
+    folder = path.join(DIR, "preload/")
     mywords = ["telefon", "wurst"]
 
     session = Session(mywords, folder)
@@ -78,5 +87,9 @@ def test_annif():
     # don't load responses for data into preload_folder, make suggestion from remote:
     main(data=mywords)
 
+#test_preload()
 
-test_preload()
+mywords = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
+
+session = Session(mywords)
+session.suggest(verbose=True)

@@ -371,6 +371,7 @@ class Session:
                 verbose: bool = False) -> None:
 
         # TODO: score types should be public
+        # TODO: filter for top x results...
         """ Suggest vocabularies based on :attr:`scheme`.
 
         :param sensitivity: set the maximum allowed Levenshtein distance between concept and result, defaults to 1
