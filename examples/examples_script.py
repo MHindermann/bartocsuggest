@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Union
 from os import path
 
-from bartocsuggest import Session
+from bartocsuggest import Session, ScoreType, Recall, Average, Sum, Coverage
 
 
 def main(data: Union[str, list],
@@ -88,6 +88,10 @@ def test_annif():
     main(data=mywords)
 
 #test_preload()
+
+help(Coverage)
+
+exit()
 
 mywords = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
 

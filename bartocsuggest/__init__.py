@@ -203,25 +203,22 @@ class Recall(ScoreType):
     The lower the better (minimum is 1). See https://en.wikipedia.org/wiki/Precision_and_recall#Recall.
 
     Example:
-
+    --------
     Words: [a,b,c]
-
     Coverage: 2
-
     Recall: len([a,b,c])/Coverage = 1.5
     """
 
 
 class Average(ScoreType):
-    """ The average score of a vocabulary's matches.
+    """ The average over a vocabulary's match scores.
 
     The lower the average the better (minimum is 0).
     The score of a match is defined by the Levenshtein distance between word and match.
 
     Example:
-
+    --------
     Scores: [1,1,4]
-
     Average: (1+1+4)/3 = 2
     """
     pass
@@ -230,23 +227,31 @@ class Average(ScoreType):
 class Coverage(ScoreType):
     """ The number of a vocabulary's matches in the list of words.
 
-    [say smthing about senssitivity]
+    Note that this is dependent on the Session.update's sensitivity parameter.
 
     Example:
-
+    --------
     Words: [a,b,c]
-
     Vocabulary matches: a,c
-
     Coverage: a,c in [a,b,c] = 2
     """
     pass
 
 
 class Sum(ScoreType):
-    """ """
+    """ The sum over a vocabulary's match scores.
+
+    The lower the average the better (minimum is 0).
+    The score of a match is defined by the Levenshtein distance between word and match.
+
+    Example:
+    --------
+    Scores: [1,1,4]
+    Sum: (1+1+4) = 6
+    """
 
     pass
+
 
 class Session:
     """ Vocabulary suggestion session using the BARTOC FAST API.
@@ -347,7 +352,7 @@ class Session:
         if verbose is True:
             print("Source rankings updated.")
 
-    def _make_suggestion(self, sensitivity: int, score_type: str, verbose: bool = False) -> _Suggestion:
+    def _make_suggestion(self, sensitivity: int, score_type: ScoreType, verbose: bool = False) -> _Suggestion:
         """ Return sources from best to worst base on score type. """
 
         if verbose is True:
@@ -355,7 +360,7 @@ class Session:
 
         # determine sorting direction:
         high_to_low = False
-        if score_type is "recall":
+        if score_type is Recall:
             high_to_low = True
 
         # sort sources by score type:
@@ -432,17 +437,18 @@ class Session:
                 verbose: bool = False) -> None:
 
         # TODO: filter for top x results...
-        """ Suggest vocabularies based on :attr:`scheme`.
+        """ Suggest vocabularies based on :attr:`words`.
 
-        :param remote: toggle remote BARTOC FAST querying, defaults to True
-        :param sensitivity: set the maximum allowed Levenshtein distance between concept and result, defaults to 1
-        :param score_type: set the score type on which the suggestion is based, defaults to "recall"
+        :param remote: toggle between remote BARTOC FAST querying and preload folder, defaults to True
+        :param sensitivity: set the maximum allowed Levenshtein distance between word and result, defaults to 1
+        :param score_type: set the score type on which the suggestion is based, defaults to :class:`bartocsuggest.Recall`
         :param maximum_responses: set a maximum number of queries sent resp. responses analyzed, defaults to 100000
         :param verbose: toggle comments, defaults to False
         """
         self._fetch_and_update(remote, maximum_responses, verbose)
         self._update_rankings(sensitivity, verbose)
         self._make_suggestion(sensitivity, score_type, verbose)
+        # TODO: return something
 
 
 class _Score:

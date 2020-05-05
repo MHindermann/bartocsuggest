@@ -15,7 +15,22 @@ Welcome to bartocsuggest's documentation!
 
 .. autofunction:: bartocsuggest.test
 
-.. autoclass:: bartocsuggest.Store
+.. autoclass:: bartocsuggest.Session
+   :members:
+
+.. autoclass:: bartocsuggest.ScoreType
+   :members:
+
+.. autoclass:: bartocsuggest.Recall
+   :members:
+
+.. autoclass:: bartocsuggest.Average
+   :members:
+
+.. autoclass:: bartocsuggest.Coverage
+   :members:
+
+.. autoclass:: bartocsuggest.Sum
    :members:
 
 Indices and tables
