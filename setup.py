@@ -4,11 +4,11 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="bartocsuggest", # Replace with your own username
-    version="0.0.1",
+    name="bartocsuggest",
+    version="0.0.2",
     author="Maximilian Hindermann",
     author_email="maximilian.hindermann@unibas.ch",
-    description="A vocabulary suggestion tool using the BARTOC FAST API.",
+    description="Vocabulary suggestion module based on BARTOC FAST",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/MHindermann/bartocsuggest",

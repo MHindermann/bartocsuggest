@@ -2,7 +2,7 @@
 bartocsuggest is a Python module that suggests vocabularies given a list of words based on the BARTOC FAST API
 (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
 
-Documentation available at:
+Documentation available at: https://bartocsuggest.readthedocs.io/en/latest/
 
 Examples available at: https://github.com/MHindermann/bartocsuggest
 """
