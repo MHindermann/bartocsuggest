@@ -1,7 +1,9 @@
 """
-bartocsuggest
+bartocsuggest is a Python module that suggests vocabularies given a list of words based on the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
 
 Documentation available at:
+
+Examples available at: https://github.com/MHindermann/bartocsuggest
 """
 
 # TODO: set up readthedocs connection: https://docs.readthedocs.io/en/stable/intro/import-guide.html
@@ -19,14 +21,6 @@ import requests
 import urllib.parse
 
 FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api"
-
-
-def test(bla: str) -> None:
-    """ A test function
-
-    :param bla: test param
-    """
-    return None
 
 
 class _Query:
@@ -191,9 +185,11 @@ class ScoreType:
     """ A score type.
 
     All score types are relative to a specific vocabulary and a list of words.
-    There are four score type classes: Recall, Coverage, Average, Sum.
+    There are four score type classes: :class:`bartocsuggest.Recall`, :class:`bartocsuggest.Average`,
+    :class:`bartocsuggest.Coverage`, :class:`bartocsuggest.Sum`.
     Use the help method on these classes for more information.
     """
+
     pass
 
 
@@ -202,24 +198,17 @@ class Recall(ScoreType):
 
     The lower the better (minimum is 1). See https://en.wikipedia.org/wiki/Precision_and_recall#Recall.
 
-    Example:
-    --------
-    Words: [a,b,c]
-    Coverage: 2
-    Recall: len([a,b,c])/Coverage = 1.5
+    For example, for words [a,b,c] and coverage 2, recall is len(words)/coverage = len([a,b,c])/2 = 1.5.
     """
 
 
 class Average(ScoreType):
     """ The average over a vocabulary's match scores.
 
-    The lower the average the better (minimum is 0).
+    The lower the the better (minimum is 0).
     The score of a match is defined by the Levenshtein distance between word and match.
 
-    Example:
-    --------
-    Scores: [1,1,4]
-    Average: (1+1+4)/3 = 2
+    For example, for scores [1,1,4], the average is scores/len(scores) = (1+1+4)/3 = 2.
     """
     pass
 
@@ -227,13 +216,9 @@ class Average(ScoreType):
 class Coverage(ScoreType):
     """ The number of a vocabulary's matches in the list of words.
 
-    Note that this is dependent on the Session.update's sensitivity parameter.
+    Note that this is dependent on the sensitivity parameter of :meth:`bartocsuggest.Session.suggest`.
 
-    Example:
-    --------
-    Words: [a,b,c]
-    Vocabulary matches: a,c
-    Coverage: a,c in [a,b,c] = 2
+    For example, for words [a,b,c] and vocabulary matches a,c, the coverage is a,c in [a,b,c] = 2.
     """
     pass
 
@@ -244,10 +229,7 @@ class Sum(ScoreType):
     The lower the average the better (minimum is 0).
     The score of a match is defined by the Levenshtein distance between word and match.
 
-    Example:
-    --------
-    Scores: [1,1,4]
-    Sum: (1+1+4) = 6
+    For example, for scores [1,1,4], the sum is (1+1+4) = 6.
     """
 
     pass
@@ -256,8 +238,8 @@ class Sum(ScoreType):
 class Session:
     """ Vocabulary suggestion session using the BARTOC FAST API.
 
-    :param words: input words, either as list of strings or complete path to XLSX file
-    :param preload_folder: complete path to folder where preloaded responses are saved, defaults to None
+    :param words: input words (list of strings or path to XLSX file)
+    :param preload_folder: path to preload folder, defaults to None
     """
 
     def __init__(self,
@@ -392,12 +374,12 @@ class Session:
                 verbose: bool = False) -> None:
         """ Preload responses.
 
-        For each word in self.words, a query is sent to the BARTOC FAST API.
-        The response is saved to self.preload_folder. Use this method for batchwise handling of large (>100) self.words.
+        For each word in :attr:`self.words`, a query is sent to the BARTOC FAST API.
+        The response is saved to :attr:`self.preload_folder`. Use this method for batchwise handling of large (>100) :attr:`self.words`.
 
         :param max: stop with the max-th word in self.words, defaults to 100000
         :param min: start with min-th word in self.words, defaults to 0
-        :param verbose: running comment printed to console, defaults to False
+        :param verbose: toggle running comment printed to console, defaults to False
         """
 
         if self._preload_folder is None:
@@ -433,21 +415,19 @@ class Session:
                 remote: bool = True,
                 sensitivity: int = 1,
                 score_type: ScoreType = Recall,
-                maximum_responses: int = 100000,
                 verbose: bool = False) -> None:
 
         # TODO: filter for top x results...
-        """ Suggest vocabularies based on :attr:`words`.
+        """ Suggest vocabularies based on :attr:`self.words`.
 
         :param remote: toggle between remote BARTOC FAST querying and preload folder, defaults to True
         :param sensitivity: set the maximum allowed Levenshtein distance between word and result, defaults to 1
         :param score_type: set the score type on which the suggestion is based, defaults to :class:`bartocsuggest.Recall`
-        :param maximum_responses: set a maximum number of queries sent resp. responses analyzed, defaults to 100000
-        :param verbose: toggle comments, defaults to False
+        :param verbose: toggle running comment printed to console, defaults to False
         """
-        self._fetch_and_update(remote, maximum_responses, verbose)
-        self._update_rankings(sensitivity, verbose)
-        self._make_suggestion(sensitivity, score_type, verbose)
+        self._fetch_and_update(remote=remote, verbose=verbose)
+        self._update_rankings(sensitivity=sensitivity, verbose=verbose)
+        self._make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=verbose)
         # TODO: return something
 
 

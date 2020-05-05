@@ -46,7 +46,7 @@ TODO: How to interpret the results.
 The latency for a response from BARTOC FAST is about 5 seconds per word. Preloading responses is hence useful for dealing with long lists of words or for trying out different types of suggestions for a given list of words without having to resend each query.
 
 ```
-from bartocsuggest import Session
+from bartocsuggest import Session, Average
 
 # preload words:
 session = Session(300_word_list, "my/preload/folder")
@@ -57,7 +57,7 @@ session.preload(200-299)
 # try out different suggestions:
 session.suggest(remote=False, verbose=True)
 session.suggest(remote=False, sensitivity=2, verbose=True)
-session.suggest(remote=False, score_type="XYZ", verbose=True)
+session.suggest(remote=False, score_type="Average", verbose=True)
 ```
 
 ### Using different score types

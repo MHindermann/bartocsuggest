@@ -89,7 +89,8 @@ def test_annif():
 
 #test_preload()
 
-help(Coverage)
+help(ScoreType)
+print(ScoreType.__doc__)
 
 exit()
 
