@@ -72,7 +72,7 @@ class _Utility:
         with open(filename, "w") as file:
             dump(json_object, file)
 
-        print(f"{filename} preloaded")
+        # print(f"{filename} preloaded")
 
     @classmethod
     def load_json(cls, preload_folder: str, number: int) -> Dict:

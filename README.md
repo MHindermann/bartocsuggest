@@ -1,65 +1,77 @@
-# bartocsuggest documentation
+# bartocsuggest
 
-core.py
+A Python module that suggests vocabularies given a list of words based on the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
 
+## Installation
 
-### class bartocsuggest.core.Bartoc(data, preload_folder=None)
-Vocabulary suggestions using the BARTOC FAST API.
+```
+pip install bartocsuggest
+```
 
+## Example
+```
+from bartocsuggest import Session
 
-* **Parameters**
+mywords = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
 
-    
-    * **data** (`Union`[`list`, `str`]) – input data (MUST use complete path)
+session = Session(mywords)
+session.suggest(verbose=True)
+```
 
+The output to the console should look something like this:
 
-    * **preload_folder** (`Optional`[`str`]) – folder to save preloaded responses in (MUST use complete path), defaults to None
+```
+73 vocabularies given sensitivity 1. From best to worst (vocabularies with no matches are excluded):
+psh.ntkcz.cz, recall: 1.0
+vocabulary.worldbank.org, recall: 1.0
+zbw.eu, recall: 1.0
+eurovoc.europa.eu, recall: 0.8571428571428571
+lod.gesis.org, recall: 0.8571428571428571
+www.yso.fi/onto/yso, recall: 0.7142857142857143
+www.yso.fi/onto/koko, recall: 0.7142857142857143
+www.yso.fi/onto/liito, recall: 0.7142857142857143
+data.bibliotheken.nl, recall: 0.7142857142857143
+lod.nal.usda.gov, recall: 0.7142857142857143
+www.yso.fi/onto/juho, recall: 0.5714285714285714
+crai.ub.edu, recall: 0.5714285714285714
+www.twse.info, recall: 0.5714285714285714
+thesaurus.web.ined.fr, recall: 0.5714285714285714
+aims.fao.org, recall: 0.5714285714285714
+...
+```
 
+TODO: How to interpret the results.
 
+## Advanced Examples
 
-#### preload(maximum=100000, minimum=0)
-Save the concept scheme’s query responses to the preload folder.
+### Preloading responses
+The latency for a response from BARTOC FAST is about 5 seconds per word. Preloading responses is hence useful for dealing with long lists of words or for trying out different types of suggestions for a given list of words without having to resend each query.
 
+```
+from bartocsuggest import Session, Average
 
-* **Parameters**
+# preload words:
+session = Session(300_word_list, "my/preload/folder")
+session.preload(0-99)
+session.preload(100-199)
+session.preload(200-299)
 
-    
-    * **maximum** (`int`) – stop with the maximum-th concept, defaults to 100000
+# try out different suggestions:
+suggestion1 = session.suggest(remote=False, verbose=True)
+suggestion2 = session.suggest(remote=False, sensitivity=2, verbose=True)
+suggestion3 = session.suggest(remote=False, score_type="Average", verbose=True)
+```
 
+### Using different score types
+score type, sensitivity
 
-    * **minimum** (`int`) – start with the minimum-th concept, defaults to 0
+## Documentation
+Documentation available at:
 
+## License
+bartocsuggest is released under the CC
 
-
-* **Return type**
-
-    `None`
-
-
-
-#### suggest(sensitivity=1, score_type='recall', remote=True, maximum_responses=100000, verbose=False)
-Suggest vocabularies based on `scheme`.
-
-
-* **Parameters**
-
-    
-    * **sensitivity** (`int`) – set the maximum allowed Levenshtein distance between concept and result, defaults to 1
-
-
-    * **score_type** (`str`) – set the score type on which the suggestion is beased, defaults to “recall”
-
-
-    * **remote** (`bool`) – toggle remote BARTOC FAST querying, defaults to True
-
-
-    * **maximum_responses** (`int`) – set a maximum number of queries sent resp. responses analyzed, defaults to 100000
-
-
-    * **verbose** (`bool`) – toggle comments, defaults to False
-
-
-
-* **Return type**
-
-    `None`
+## Contact
+Maximilian Hindermann  
+maximilian.hindermann@unibas.ch  
+https://orcid.org/0000-0002-9337-4655
