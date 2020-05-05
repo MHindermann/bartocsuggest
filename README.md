@@ -40,11 +40,7 @@ aims.fao.org, recall: 0.5714285714285714
 ...
 ```
 
-TODO: How to interpret the results.
-
-## Advanced Examples
-
-### Preloading responses
+## Preloading responses
 The latency for a response from BARTOC FAST is about 5 seconds per word. Preloading responses is hence useful for dealing with long lists of words or for trying out different types of suggestions for a given list of words without having to resend each query.
 
 ```
@@ -62,14 +58,11 @@ suggestion2 = session.suggest(remote=False, sensitivity=2, verbose=True)
 suggestion3 = session.suggest(remote=False, score_type="Average", verbose=True)
 ```
 
-### Using different score types
-score type, sensitivity
-
 ## Documentation
 Documentation available at:
 
 ## License
-bartocsuggest is released under the CC
+bartocsuggest is released under the MIT License.
 
 ## Contact
 Maximilian Hindermann  
