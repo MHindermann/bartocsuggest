@@ -1,5 +1,6 @@
 """
-bartocsuggest is a Python module that suggests vocabularies given a list of words based on the BARTOC FAST API (https://bartoc-fast.ub.unibas.ch/bartocfast/api).
+bartocsuggest is a Python module that suggests vocabularies given a list of words based on the BARTOC FAST API
+(https://bartoc-fast.ub.unibas.ch/bartocfast/api).
 
 Documentation available at:
 
@@ -191,6 +192,7 @@ class ScoreType:
     """
 
     pass
+    # TODO: implement measure for noise
 
 
 class Recall(ScoreType):
@@ -275,7 +277,7 @@ class Session:
         else:
             scheme = _Utility.load_file(words)
 
-        print(f"{words} loaded successfully. {len(scheme.concepts)} concepts in {scheme}")
+        print(f"{words} loaded successfully, {len(scheme.concepts)} words detected.")
         return scheme
 
     def _add_source(self, source: _Source) -> None:
@@ -324,7 +326,8 @@ class Session:
             for concept in self._scheme.concepts:
                 if counter > maximum:  # debug
                     break
-                searchword = concept.preflabel.get_value("en")  # TODO: generalize this
+                # TODO: generalize this for multi-language support
+                searchword = concept.preflabel.get_value("en")
                 if verbose is True:
                     print(f"Word being fetched is {searchword}")
                 query = _Query(searchword)
@@ -369,7 +372,7 @@ class Session:
 
         suggestion = Suggestion(contenders, sensitivity, score_type)
 
-        if verbose is True: # TODO: pack this as method for Suggestion class
+        if verbose is True:
             print(f"Suggestions calculated.")
             suggestion.print()
 
@@ -423,8 +426,6 @@ class Session:
                 sensitivity: int = 1,
                 score_type: ScoreType = Recall,
                 verbose: bool = False) -> Suggestion:
-
-        # TODO: filter for top x results...
         """ Suggest vocabularies based on :attr:`self.words`.
 
         :param remote: toggle between remote BARTOC FAST querying and preload folder, defaults to True
@@ -519,9 +520,6 @@ class _Ranking:
         self.score_average = score_average
         self.score_coverage = score_coverage
         self.recall = recall
-
-    def str(self) -> str:
-        return f"Sum: {self.score_sum} / Average: {self.score_average} / Coverage: {self.score_coverage} / Recall: {self.recall}"
 
 
 class _Analysis:
@@ -622,13 +620,13 @@ class _Source:
 
 
 class Suggestion:
-    """ A suggestion. """
+    """ A suggestion of vocabularies. """
 
     def __init__(self,
-                 _sources: List[_Source],
+                 _vocabularies: List[_Source],
                  _sensitivity: int,
                  _score_type: ScoreType) -> None:
-        self._sources = _sources
+        self._sources = _vocabularies
         self._sensitivity = _sensitivity
         self._score_type = _score_type
 
@@ -670,6 +668,3 @@ class Suggestion:
         """ Return the suggestion's sensitivity. """
 
         return self._sensitivity
-
-# TODO: implement measure for noise
-

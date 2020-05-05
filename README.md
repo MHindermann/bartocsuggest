@@ -18,24 +18,26 @@ session = Session(mywords)
 session.suggest(verbose=True)
 ```
 
-Output to console should look like this:
+The output to the console should look something like this:
 
 ```
----RESULTS--------------------------------------------------------------------------------
-73 results with sensitivity 1. From best to worst (sources with no results are excluded):
-psh.ntkcz.cz recall: 1.0
-vocabulary.worldbank.org recall: 1.0
-zbw.eu recall: 1.0
-eurovoc.europa.eu recall: 0.8571428571428571
-lod.gesis.org recall: 0.8571428571428571
-www.yso.fi/onto/yso recall: 0.7142857142857143
-www.yso.fi/onto/koko recall: 0.7142857142857143
-www.yso.fi/onto/liito recall: 0.7142857142857143
-data.bibliotheken.nl recall: 0.7142857142857143
-lod.nal.usda.gov recall: 0.7142857142857143
-www.yso.fi/onto/juho recall: 0.5714285714285714
-crai.ub.edu recall: 0.5714285714285714
----RESULTS END----------------------------------------------------------------------------
+73 vocabularies given sensitivity 1. From best to worst (vocabularies with no matches are excluded):
+psh.ntkcz.cz, recall: 1.0
+vocabulary.worldbank.org, recall: 1.0
+zbw.eu, recall: 1.0
+eurovoc.europa.eu, recall: 0.8571428571428571
+lod.gesis.org, recall: 0.8571428571428571
+www.yso.fi/onto/yso, recall: 0.7142857142857143
+www.yso.fi/onto/koko, recall: 0.7142857142857143
+www.yso.fi/onto/liito, recall: 0.7142857142857143
+data.bibliotheken.nl, recall: 0.7142857142857143
+lod.nal.usda.gov, recall: 0.7142857142857143
+www.yso.fi/onto/juho, recall: 0.5714285714285714
+crai.ub.edu, recall: 0.5714285714285714
+www.twse.info, recall: 0.5714285714285714
+thesaurus.web.ined.fr, recall: 0.5714285714285714
+aims.fao.org, recall: 0.5714285714285714
+...
 ```
 
 TODO: How to interpret the results.
@@ -55,9 +57,9 @@ session.preload(100-199)
 session.preload(200-299)
 
 # try out different suggestions:
-session.suggest(remote=False, verbose=True)
-session.suggest(remote=False, sensitivity=2, verbose=True)
-session.suggest(remote=False, score_type="Average", verbose=True)
+suggestion1 = session.suggest(remote=False, verbose=True)
+suggestion2 = session.suggest(remote=False, sensitivity=2, verbose=True)
+suggestion3 = session.suggest(remote=False, score_type="Average", verbose=True)
 ```
 
 ### Using different score types

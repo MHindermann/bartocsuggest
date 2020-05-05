@@ -87,6 +87,7 @@ def test_annif():
     # don't load responses for data into preload_folder, make suggestion from remote:
     main(data=mywords)
 
+
 mywords = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
 
 session = Session(mywords)
