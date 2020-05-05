@@ -59,7 +59,7 @@ suggestion3 = session.suggest(remote=False, score_type="Average", verbose=True)
 ```
 
 ## Documentation
-Documentation available at:
+Documentation available at: https://readthedocs.org/projects/bartocsuggest/
 
 ## License
 bartocsuggest is released under the MIT License.
