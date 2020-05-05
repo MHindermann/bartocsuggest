@@ -31,8 +31,8 @@ release = '0.0.2'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
-              'sphinxcontrib.restbuilder', # https://pythonhosted.org/sphinxcontrib-restbuilder/
-              'sphinx_autodoc_typehints', # https://github.com/agronholm/sphinx-autodoc-typehints/blob/master/README.rst
+              'sphinxcontrib.restbuilder',  # https://pythonhosted.org/sphinxcontrib-restbuilder/
+              'sphinx_autodoc_typehints',  # https://github.com/agronholm/sphinx-autodoc-typehints/blob/master/README.rst
 ]
 
 # Add any paths that contain templates here, relative to this directory.
