@@ -16,6 +16,9 @@ bartocsuggest documentation
 .. autoclass:: bartocsuggest.Session
    :members:
 
+.. autoclass:: bartocsuggest.Suggestion
+   :members:
+
 .. autoclass:: bartocsuggest.ScoreType
    :members:
 

@@ -9,7 +9,7 @@ Examples available at: https://github.com/MHindermann/bartocsuggest
 # TODO: set up readthedocs connection: https://docs.readthedocs.io/en/stable/intro/import-guide.html
 
 from __future__ import annotations
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
 from os import path
 
@@ -201,6 +201,10 @@ class Recall(ScoreType):
     For example, for words [a,b,c] and coverage 2, recall is len(words)/coverage = len([a,b,c])/2 = 1.5.
     """
 
+    @classmethod
+    def __str__(cls) -> str:
+        return "recall"
+
 
 class Average(ScoreType):
     """ The average over a vocabulary's match scores.
@@ -210,7 +214,10 @@ class Average(ScoreType):
 
     For example, for scores [1,1,4], the average is scores/len(scores) = (1+1+4)/3 = 2.
     """
-    pass
+
+    @classmethod
+    def __str__(cls) -> str:
+        return "score_average"
 
 
 class Coverage(ScoreType):
@@ -220,7 +227,10 @@ class Coverage(ScoreType):
 
     For example, for words [a,b,c] and vocabulary matches a,c, the coverage is a,c in [a,b,c] = 2.
     """
-    pass
+
+    @classmethod
+    def __str__(cls) -> str:
+        return "score_coverage"
 
 
 class Sum(ScoreType):
@@ -232,7 +242,9 @@ class Sum(ScoreType):
     For example, for scores [1,1,4], the sum is (1+1+4) = 6.
     """
 
-    pass
+    @classmethod
+    def __str__(cls) -> str:
+        return "score_sum"
 
 
 class Session:
@@ -334,7 +346,7 @@ class Session:
         if verbose is True:
             print("Source rankings updated.")
 
-    def _make_suggestion(self, sensitivity: int, score_type: ScoreType, verbose: bool = False) -> _Suggestion:
+    def _make_suggestion(self, sensitivity: int, score_type: ScoreType, verbose: bool = False) -> Suggestion:
         """ Return sources from best to worst base on score type. """
 
         if verbose is True:
@@ -349,22 +361,17 @@ class Session:
         contenders = []
         disqualified = []
         for source in self._sources:
-            if getattr(source.ranking, score_type) is None:
+            if getattr(source.ranking, score_type.__str__()) is None:
                 disqualified.append(source)
             else:
                 contenders.append(source)
-        contenders.sort(key=lambda x: getattr(x.ranking, score_type), reverse=high_to_low)
+        contenders.sort(key=lambda x: getattr(x.ranking, score_type.__str__()), reverse=high_to_low)
 
-        suggestion = _Suggestion(contenders, sensitivity, score_type)
+        suggestion = Suggestion(contenders, sensitivity, score_type)
 
-        if verbose is True:
+        if verbose is True: # TODO: pack this as method for Suggestion class
             print(f"Suggestions calculated.")
-            print("---RESULTS--------------------------------------------------------------------------------")
-            print(f"{len(suggestion.sources)} results with sensitivity {sensitivity}."
-                  f" From best to worst (sources with no results are excluded):")
-            for source in suggestion.sources:
-                print(f"{source.name} {score_type}: {getattr(source.ranking, score_type)}")
-            print("---RESULTS END----------------------------------------------------------------------------")
+            suggestion.print()
 
         return suggestion
 
@@ -415,7 +422,7 @@ class Session:
                 remote: bool = True,
                 sensitivity: int = 1,
                 score_type: ScoreType = Recall,
-                verbose: bool = False) -> None:
+                verbose: bool = False) -> Suggestion:
 
         # TODO: filter for top x results...
         """ Suggest vocabularies based on :attr:`self.words`.
@@ -427,8 +434,9 @@ class Session:
         """
         self._fetch_and_update(remote=remote, verbose=verbose)
         self._update_rankings(sensitivity=sensitivity, verbose=verbose)
-        self._make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=verbose)
-        # TODO: return something
+        suggestion = self._make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=verbose)
+
+        return suggestion
 
 
 class _Score:
@@ -613,16 +621,55 @@ class _Source:
             print(f"{self.name} updated.")
 
 
-class _Suggestion:
+class Suggestion:
     """ A suggestion. """
 
     def __init__(self,
-                 sources: List[_Source],
-                 sensitivity: int,
-                 score_type: str) -> None:
-        self.sources = sources
-        self.sensitivity = sensitivity
-        self.score_type = score_type
+                 _sources: List[_Source],
+                 _sensitivity: int,
+                 _score_type: ScoreType) -> None:
+        self._sources = _sources
+        self._sensitivity = _sensitivity
+        self._score_type = _score_type
+
+    def get(self, scores: bool = False, max: int = None) -> Union[List[str], List[Tuple[str, int]]]:
+        """ Return the suggested vocabularies sorted from best to worst.
+
+        :param scores: toggle returning results and their scores, defaults to False
+        :param max: limit the number of suggestions to max, defaults to None """
+
+        results = []
+
+        for source in self._sources:
+            try:
+                if len(results) + 1 > max:
+                    break
+            except TypeError:
+                pass
+            if scores is True:
+                results.append([source.name, getattr(source.ranking, self._score_type.__str__())])
+            else:
+                results.append(source.name)
+
+        return results
+
+    def print(self):
+        """ Print the suggestion to the console. """
+
+        print(f"{len(self._sources)} vocabularies given sensitivity {self._sensitivity}."
+              f" From best to worst (vocabularies with no matches are excluded):")
+        for source in self._sources:
+            print(f"{source.name}, {self._score_type.__str__()}: {getattr(source.ranking, self._score_type.__str__())}")
+
+    def get_score_type(self) -> ScoreType:
+        """ Return the suggestion's score type. """
+
+        return self._score_type
+
+    def get_sensitivity(self) -> int:
+        """ Return the suggestion's sensitivity. """
+
+        return self._sensitivity
 
 # TODO: implement measure for noise
 

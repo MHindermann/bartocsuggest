@@ -87,13 +87,6 @@ def test_annif():
     # don't load responses for data into preload_folder, make suggestion from remote:
     main(data=mywords)
 
-#test_preload()
-
-help(ScoreType)
-print(ScoreType.__doc__)
-
-exit()
-
 mywords = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
 
 session = Session(mywords)
