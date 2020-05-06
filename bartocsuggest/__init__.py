@@ -7,8 +7,6 @@ Documentation available at: https://bartocsuggest.readthedocs.io/en/latest/
 Examples available at: https://github.com/MHindermann/bartocsuggest
 """
 
-# TODO: set up readthedocs connection: https://docs.readthedocs.io/en/stable/intro/import-guide.html
-
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
@@ -474,7 +472,12 @@ class _LevenshteinVector(_Vector):
 
     def make_score(self, searchword: str, result: dict) -> Optional[_Score]:
         """ Make the Levenshtein score for a result.
-        The Levenshtein score is the minimum Levenshtein distance over all labels. """
+
+        The Levenshtein score is the minimum Levenshtein distance over all labels.
+
+        :param searchword: the word from which the distance is measured
+        :param result: contains matches to which the distance is measured
+        """
 
         scores = []
         labels = ["prefLabel", "altLabel", "hiddenLabel", "definition"]
@@ -523,6 +526,7 @@ class _Ranking:
 
 
 class _Analysis:
+    # TODO: move classmethods to appropriate classes
     """ A collection of methods for analyzing score vectors. """
 
     @classmethod
