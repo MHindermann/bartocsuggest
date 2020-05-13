@@ -4,7 +4,7 @@ bartocsuggest is a Python module that suggests vocabularies given a list of word
 
 Documentation available at: https://bartocsuggest.readthedocs.io/en/latest/
 
-Examples available at: https://github.com/MHindermann/bartocsuggest
+Codebase available at: https://github.com/MHindermann/bartocsuggest
 """
 
 from __future__ import annotations
