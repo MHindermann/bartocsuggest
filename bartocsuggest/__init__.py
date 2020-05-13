@@ -255,14 +255,14 @@ class Session:
     """
 
     def __init__(self,
-                 words: Union[List[str], str],
+                 words: Union[List[str], str, _ConceptScheme],
                  preload_folder: str = None) -> None:
         self._scheme = self._set_input(words)
         self._preload_folder = preload_folder
         self._sources = []
         self._input_file = None
 
-    def _set_input(self, words: Union[list, str]) -> _ConceptScheme:
+    def _set_input(self, words: Union[list, str, _ConceptScheme]) -> _ConceptScheme:
         """ Set words as Concept Scheme.
 
         The input words are transformed into a JSKOS Concept Scheme for internal representation.
@@ -272,6 +272,8 @@ class Session:
 
         if type(words) is list:
             scheme = _Utility.list2jskos(words)
+        elif type(words) is _ConceptScheme:
+            scheme = words
         else:
             scheme = _Utility.load_file(words)
 
