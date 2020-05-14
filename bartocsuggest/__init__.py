@@ -587,6 +587,7 @@ class _Analysis:
     @classmethod
     def make_score_sum(cls, vector: _LevenshteinVector) -> Optional[int]:
         """ Return the sum of all scores in the vector.
+
         The lower the sum the better. """
 
         try:
@@ -597,6 +598,7 @@ class _Analysis:
     @classmethod
     def make_score_average(cls, vector: _LevenshteinVector) -> Optional[float]:
         """ Return the vector's average score.
+
          The lower the average the better. """
 
         score_sum = cls.make_score_sum(vector)
@@ -617,6 +619,7 @@ class _Analysis:
     @classmethod
     def make_best_vector(cls, vector: _LevenshteinVector, sensitivity: int) -> Optional[_LevenshteinVector]:
         """ Return the best vector of a vector.
+
          The best vector has the best score for each searchword. """
 
         # collect all unique searchwords in vector:
@@ -640,6 +643,7 @@ class _Analysis:
     @classmethod
     def make_recall(cls, relevant: int, retrieved: int) -> Optional[float]:
         """ Return recall.
+
          See https://en.wikipedia.org/wiki/Precision_and_recall#Recall """
 
         try:
@@ -727,3 +731,32 @@ class Suggestion:
         """ Return the suggestion's sensitivity. """
 
         return self._sensitivity
+
+    def get_mapping(self, vocabulary_name: str = None) -> None:
+        """ Return the mapping between the input words and a vocabulary.
+
+        If no vocabulary name is selected, the most highly suggested vocabulary is taken as default.
+
+        :param vocabulary_name: the name of the vocabulary, defaults to None
+        """
+
+        if vocabulary_name is None:
+            vocabulary = self._sources[0]
+        else:
+            try:
+                # vocabulary in self._vocabularies
+                pass
+            except:
+                pass
+
+        print(f"Mapping for {vocabulary.name}:")
+
+        # the ranking of self._vocabularies is based on the best vectors:
+        best_vector = _Analysis.make_best_vector(vocabulary.levenshtein_vector, self._sensitivity)
+        if best_vector is None:
+            print("ERROR: Empty mapping!")
+        else:
+            for score in best_vector.get_vector():
+                print(f"{score.searchword} <=> {score.foundword}")
+
+
