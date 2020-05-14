@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
 from os import path
+from annif_client import AnnifClient
 
 from .utility import _Utility
 from .jskos import _ConceptScheme
@@ -260,7 +261,6 @@ class Session:
         self._scheme = self._set_input(words)
         self._preload_folder = preload_folder
         self._sources = []
-        self._input_file = None
 
     def _set_input(self, words: Union[list, str, _ConceptScheme]) -> _ConceptScheme:
         """ Set words as Concept Scheme.
@@ -268,6 +268,7 @@ class Session:
         The input words are transformed into a JSKOS Concept Scheme for internal representation.
 
         :param words: either a list, or a filename (MUST use complete filepath).
+        :param **kawrgs: forward compatibility for subclasses.
         """
 
         if type(words) is list:
@@ -438,6 +439,39 @@ class Session:
         suggestion = self._make_suggestion(sensitivity=sensitivity, score_type=score_type, verbose=verbose)
 
         return suggestion
+
+
+class AnnifSession(Session):
+    """ bla
+    see https://api.annif.org/v1/ui/#!/Automatic32subject32indexing/annif_rest_suggest
+    """
+
+    def __init__(self,
+                 text: str,
+                 project_id: str,
+                 limit: int = None,
+                 threshold: int = None,
+                 preload_folder: str = None) -> None:
+        self._scheme = self._set_input(text, project_id=project_id, limit=limit, threshold=threshold)
+        self._preload_folder = preload_folder
+        self._sources = []
+
+    def _set_input(self, text: str, **kwargs) -> _ConceptScheme:
+        """ Use words suggested by Annif on the basis of text to set JSKOS Concept Scheme.
+
+        :param text: input text
+        :param **kwargs: required or optional Annif parameters
+        """
+
+        annif = AnnifClient()
+        annif_suggestion = annif.suggest(project_id=kwargs.get("project_id"),
+                                         text=text,
+                                         limit=kwargs.get("limit"),
+                                         threshold=kwargs.get("threshold"))
+
+        scheme = _Utility.annif2jskos(annif_suggestion, kwargs.get("project_id"))
+
+        return scheme
 
 
 class _Score:
