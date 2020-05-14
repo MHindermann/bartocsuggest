@@ -441,8 +441,16 @@ class Session:
 
 
 class AnnifSession(Session):
-    """ bla
-    see https://api.annif.org/v1/ui/#!/Automatic32subject32indexing/annif_rest_suggest
+    """ Wrapper for the Annif REST API based on the Annif-client module.
+
+    Annif indexes the input text based on the project identifier with an optional limit or threshold.
+    Use this Session to get vocabulary suggestions for full texts instead of words.
+    :class:`bartocsuggest.AnnifSession` inherits its methods preload and suggest from :class:`bartocsuggest.Session`.
+
+    :param text: the input text
+    :param project_id: the project identifier
+    :param limit: the maximum number of results to return, defaults to None
+    :param threshold: the minimum score threshold, defaults to None
     """
 
     def __init__(self,
