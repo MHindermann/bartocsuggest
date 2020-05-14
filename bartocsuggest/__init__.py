@@ -268,7 +268,6 @@ class Session:
         The input words are transformed into a JSKOS Concept Scheme for internal representation.
 
         :param words: either a list, or a filename (MUST use complete filepath).
-        :param **kawrgs: forward compatibility for subclasses.
         """
 
         if type(words) is list:
