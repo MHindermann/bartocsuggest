@@ -31,6 +31,12 @@ bartocsuggest documentation
 .. autoclass:: bartocsuggest.Sum
    :members:
 
+Wrappers
+--------
+
+.. autoclass:: bartocsuggest.AnnifSession
+   :members:
+
 Indices and tables
 ==================
 

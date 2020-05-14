@@ -4,15 +4,14 @@ bartocsuggest is a Python module that suggests vocabularies given a list of word
 
 Documentation available at: https://bartocsuggest.readthedocs.io/en/latest/
 
-Examples available at: https://github.com/MHindermann/bartocsuggest
+Codebase available at: https://github.com/MHindermann/bartocsuggest
 """
-
-# TODO: set up readthedocs connection: https://docs.readthedocs.io/en/stable/intro/import-guide.html
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
 from os import path
+from annif_client import AnnifClient
 
 from .utility import _Utility
 from .jskos import _ConceptScheme
@@ -257,14 +256,13 @@ class Session:
     """
 
     def __init__(self,
-                 words: Union[List[str], str],
+                 words: Union[List[str], str, _ConceptScheme],
                  preload_folder: str = None) -> None:
         self._scheme = self._set_input(words)
         self._preload_folder = preload_folder
         self._sources = []
-        self._input_file = None
 
-    def _set_input(self, words: Union[list, str]) -> _ConceptScheme:
+    def _set_input(self, words: Union[list, str, _ConceptScheme]) -> _ConceptScheme:
         """ Set words as Concept Scheme.
 
         The input words are transformed into a JSKOS Concept Scheme for internal representation.
@@ -274,6 +272,8 @@ class Session:
 
         if type(words) is list:
             scheme = _Utility.list2jskos(words)
+        elif type(words) is _ConceptScheme:
+            scheme = words
         else:
             scheme = _Utility.load_file(words)
 
@@ -440,6 +440,47 @@ class Session:
         return suggestion
 
 
+class AnnifSession(Session):
+    """ Wrapper for the Annif REST API based on the Annif-client module.
+
+    Annif indexes the input text based on the project identifier with an optional limit or threshold.
+    Use this Session to get vocabulary suggestions for full texts instead of words.
+    :class:`bartocsuggest.AnnifSession` inherits its methods preload and suggest from :class:`bartocsuggest.Session`.
+
+    :param text: the input text
+    :param project_id: the project identifier
+    :param limit: the maximum number of results to return, defaults to None
+    :param threshold: the minimum score threshold, defaults to None
+    """
+
+    def __init__(self,
+                 text: str,
+                 project_id: str,
+                 limit: int = None,
+                 threshold: int = None,
+                 preload_folder: str = None) -> None:
+        self._scheme = self._set_input(text, project_id=project_id, limit=limit, threshold=threshold)
+        self._preload_folder = preload_folder
+        self._sources = []
+
+    def _set_input(self, text: str, **kwargs) -> _ConceptScheme:
+        """ Use words suggested by Annif on the basis of text to set JSKOS Concept Scheme.
+
+        :param text: input text
+        :param **kwargs: required or optional Annif parameters
+        """
+
+        annif = AnnifClient()
+        annif_suggestion = annif.suggest(project_id=kwargs.get("project_id"),
+                                         text=text,
+                                         limit=kwargs.get("limit"),
+                                         threshold=kwargs.get("threshold"))
+
+        scheme = _Utility.annif2jskos(annif_suggestion, kwargs.get("project_id"))
+
+        return scheme
+
+
 class _Score:
     """ A score. """
 
@@ -474,7 +515,12 @@ class _LevenshteinVector(_Vector):
 
     def make_score(self, searchword: str, result: dict) -> Optional[_Score]:
         """ Make the Levenshtein score for a result.
-        The Levenshtein score is the minimum Levenshtein distance over all labels. """
+
+        The Levenshtein score is the minimum Levenshtein distance over all labels.
+
+        :param searchword: the word from which the distance is measured
+        :param result: contains matches to which the distance is measured
+        """
 
         scores = []
         labels = ["prefLabel", "altLabel", "hiddenLabel", "definition"]
@@ -523,6 +569,7 @@ class _Ranking:
 
 
 class _Analysis:
+    # TODO: move classmethods to appropriate classes
     """ A collection of methods for analyzing score vectors. """
 
     @classmethod

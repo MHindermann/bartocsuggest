@@ -3,10 +3,11 @@
 Utility functions. """
 
 from __future__ import annotations
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from os import path
 from openpyxl import load_workbook
 from json import dump, load
+from annif_client import AnnifClient
 
 from .jskos import _Concept, _ConceptScheme, _LanguageMap
 
@@ -57,6 +58,34 @@ class _Utility:
         scheme = _ConceptScheme()
         for item in input_list:
             concept = _Concept(preflabel=_LanguageMap({"en": item}))  # TODO: automate language detection
+            scheme.concepts.append(concept)
+
+        return scheme
+
+    @classmethod
+    def annif2jskos(cls, annif_suggestion: List[dict], annif_project_id: str) -> jskos._ConceptScheme:
+        """ Transform an Annif suggestion to JSKOS.
+
+        :param annif_suggestion: the output of calling AnnifClient.suggest
+        :param annif_project_id: Annif API project identifier
+        """
+
+        # get project details:
+        annif = AnnifClient()
+        project = annif.get_project(annif_project_id)
+        language = project.get("language")
+        name = project.get("name")
+
+        # setup concept scheme based on project details:
+        # TODO: add project uri
+        scheme = _ConceptScheme(preflabel=_LanguageMap({language: name}))
+
+        # make concept from result and add to concept scheme:
+        for result in annif_suggestion:
+            label = result.get("label")
+            uri = result.get("uri")
+            # TODO: add inscheme = concept scheme's uri
+            concept = _Concept(uri=uri, preflabel=_LanguageMap({language: label}))
             scheme.concepts.append(concept)
 
         return scheme
