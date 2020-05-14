@@ -7,6 +7,8 @@ Documentation available at: https://bartocsuggest.readthedocs.io/en/latest/
 Codebase available at: https://github.com/MHindermann/bartocsuggest
 """
 
+# TODO: update readme with AnnifSession example
+
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
@@ -482,13 +484,22 @@ class AnnifSession(Session):
 
 
 class _Score:
-    """ A score. """
+    """ A score.
+
+    The value is derived by a comparison between a search word and a found word elsewhere.
+
+    :param value: the score's numerical value, defaults to None
+    :param searchword: the search word, defaults to None
+    :param foundword: the found word, defaults to None
+    """
 
     def __init__(self,
                  value: int = None,
-                 searchword: str = None) -> None:
+                 searchword: str = None,
+                 foundword: str = None) -> None:
         self.value = value
         self.searchword = searchword
+        self.foundword = foundword
 
 
 class _Vector:
@@ -516,7 +527,7 @@ class _LevenshteinVector(_Vector):
     def make_score(self, searchword: str, result: dict) -> Optional[_Score]:
         """ Make the Levenshtein score for a result.
 
-        The Levenshtein score is the minimum Levenshtein distance over all labels.
+        The Levenshtein score is the minimum Levenshtein distance over all labels and languages.
 
         :param searchword: the word from which the distance is measured
         :param result: contains matches to which the distance is measured
@@ -526,14 +537,15 @@ class _LevenshteinVector(_Vector):
         labels = ["prefLabel", "altLabel", "hiddenLabel", "definition"]
 
         for label in labels:
-            label_value = result.get(label)
-            if label_value is None:
+            labelstring = result.get(label)
+            if labelstring is None:
                 continue
             distances = []
-            # check if label is multilingual:
-            for language_value in label_value.split(";"):
-                # clean searchword and language_value before measuring distance:
-                distances.append(Levenshtein.distance(searchword.lower(), language_value.lower()))
+            # check if labelstring has more than one language:
+            for foundword in labelstring.split(";"):
+                distance = Levenshtein.distance(searchword.lower(), foundword.lower())
+                distances.append((distance,foundword))
+            # add the best foundword and distance tuple per label over all languages:
             scores.append(min(distances))
 
         # catch malformed (= empty labels) results:
@@ -542,7 +554,7 @@ class _LevenshteinVector(_Vector):
         except ValueError:
             return None
 
-        return _Score(min(scores), searchword)
+        return _Score(value=min(scores)[0], searchword=searchword, foundword=min(scores)[1])
 
     def update_score(self, searchword: str, result: dict) -> None:
         """ Update the Levenshtein vector with the Levenshtein score from searchword and result. """
