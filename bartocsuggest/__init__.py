@@ -329,7 +329,7 @@ class Session:
                 if counter > maximum:  # debug
                     break
                 # TODO: generalize this for multi-language support
-                searchword = concept.preflabel.get_value("en")
+                searchword = concept.pref_label.get_value("en")
                 if verbose is True:
                     print(f"Word being fetched is {searchword}")
                 query = _Query(searchword)
@@ -410,7 +410,7 @@ class Session:
                 counter += 1
                 continue
 
-            searchword = concept.preflabel.get_value("en")
+            searchword = concept.pref_label.get_value("en")
             if verbose is True:
                 print(f"Preloading word number {counter} '{searchword}'...", end=" ")
             query = _Query(searchword)
@@ -740,7 +740,7 @@ class Suggestion:
         :param vocabulary_name: the name of the vocabulary, defaults to None
         """
 
-        # TODO: this is the prototype, now the correct JSKOS output is needed
+        # TODO: this is the prototype, now the correct JSKOS output is needed http://coli-conc.gbv.de/concordances/wikidata/
 
         vocabulary = None
 

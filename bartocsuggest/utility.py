@@ -46,7 +46,7 @@ class _Utility:
                 if row[0] is None:
                     continue
                 else:
-                    concept = _Concept(preflabel=_LanguageMap({"en": row[0]}))  # TODO: automate language detection
+                    concept = _Concept(pref_label=_LanguageMap({"en": row[0]}))  # TODO: automate language detection
                     scheme.concepts.append(concept)
 
         return scheme
@@ -57,7 +57,7 @@ class _Utility:
 
         scheme = _ConceptScheme()
         for item in input_list:
-            concept = _Concept(preflabel=_LanguageMap({"en": item}))  # TODO: automate language detection
+            concept = _Concept(pref_label=_LanguageMap({"en": item}))  # TODO: automate language detection
             scheme.concepts.append(concept)
 
         return scheme
@@ -78,14 +78,14 @@ class _Utility:
 
         # setup concept scheme based on project details:
         # TODO: add project uri
-        scheme = _ConceptScheme(preflabel=_LanguageMap({language: name}))
+        scheme = _ConceptScheme(pref_label=_LanguageMap({language: name}))
 
         # make concept from result and add to concept scheme:
         for result in annif_suggestion:
             label = result.get("label")
             uri = result.get("uri")
             # TODO: add inscheme = concept scheme's uri
-            concept = _Concept(uri=uri, preflabel=_LanguageMap({language: label}))
+            concept = _Concept(uri=uri, pref_label=_LanguageMap({language: label}))
             scheme.concepts.append(concept)
 
         return scheme

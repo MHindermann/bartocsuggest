@@ -28,11 +28,11 @@ class _Resource:
 
     def __init__(self,
                  uri: str = None,
-                 form: Set[str] = None,  # form = type
+                 type_: Set[str] = None,
                  context: str = None
                  ) -> None:
         self.uri = uri
-        self.form = form
+        self.type_ = type_
         if context is None:
             self.context = "https://gbv.github.io/jskos/context.json"
 
@@ -42,15 +42,15 @@ class _Item(_Resource):
 
     def __init__(self,
                  uri: str = None,
-                 form: Set[str] = None,
+                 type_: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 preflabel: _LanguageMap = None
+                 pref_label: _LanguageMap = None
                  ) -> None:
         if url is None:
             self.url = uri
-        self.preflabel = preflabel
-        super().__init__(uri, form, context)
+        self.pref_label = pref_label
+        super().__init__(uri, type_, context)
 
 
 class _Concept(_Item):
@@ -58,14 +58,14 @@ class _Concept(_Item):
 
     def __init__(self,
                  uri: str = None,
-                 form: Set[str] = None,
+                 type_: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 preflabel: _LanguageMap = None,
+                 pref_label: _LanguageMap = None,
                  inscheme: set = None
                  ) -> None:
         self.inscheme = inscheme
-        super().__init__(uri, form, context, url, preflabel)
+        super().__init__(uri, type_, context, url, pref_label)
 
 
 class _ConceptScheme(_Item):
@@ -73,12 +73,83 @@ class _ConceptScheme(_Item):
 
     def __init__(self,
                  uri: str = None,
-                 form: Set[str] = None,
+                 type_: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 preflabel: _LanguageMap = None,
+                 pref_label: _LanguageMap = None,
                  concepts: List[_Concept] = None
                  ) -> None:
         if concepts is None:
             self.concepts = []
-        super().__init__(uri, form, context, url, preflabel)
+        super().__init__(uri, type_, context, url, pref_label)
+
+
+class _ConceptBundle:
+    """ https://gbv.github.io/jskos/jskos.html#concept-bundles
+
+    :param member_set: concepts in this bundle (unordered)
+    """
+
+    def __init__(self,
+                 member_set: Set[_Concept]
+                 ) -> None:
+        self.member_set = member_set
+
+
+class _ConceptMapping(_Item):
+    """ https://gbv.github.io/jskos/jskos.html#concept-mappings
+
+    :param from_:
+    :param to:
+    :param from_scheme:
+    :param to_scheme:
+    """
+
+    def __init__(self,
+                 from_: _ConceptBundle,
+                 to: _ConceptBundle,
+                 from_scheme: _ConceptScheme = None,
+                 to_scheme: _ConceptScheme = None,
+                 uri: str = None,
+                 type_: Set[str] = None,
+                 context: str = None,
+                 url: str = None,
+                 pref_label: _LanguageMap = None
+                 ) -> None:
+        self.from_ = from_
+        self.to = to
+        self.from_scheme = from_scheme
+        self.to_scheme = to_scheme
+        super().__init__(uri, type_, context, url, pref_label)
+
+
+class _Concordance(_Item):
+    """ https://gbv.github.io/jskos/jskos.html#concordances
+
+    :param from_scheme:
+    :param to_scheme:
+    """
+
+    def __init__(self,
+                 from_scheme: _ConceptScheme,
+                 to_scheme: _ConceptScheme,
+                 uri: str = None,
+                 type_: Set[str] = None,
+                 context: str = None,
+                 url: str = None,
+                 pref_label: _LanguageMap = None
+                 ) -> None:
+        self.from_scheme = from_scheme
+        self.to_scheme = to_scheme
+        super().__init__(uri, type_, context, url, pref_label)
+
+
+class _TestRessource:
+    """ http://gbv.github.io/jskos/jskos.html#resource
+
+    :param context: bla
+    """
+
+    def __init__(self, **optional_fields):
+        for key, value in optional_fields:
+            self.key = value
