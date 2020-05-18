@@ -740,18 +740,23 @@ class Suggestion:
         :param vocabulary_name: the name of the vocabulary, defaults to None
         """
 
+        # TODO: this is the prototype, now the correct JSKOS output is needed
+
+        vocabulary = None
+
+        # choose the correct vocabulary:
         if vocabulary_name is None:
             vocabulary = self._sources[0]
         else:
-            try:
-                # vocabulary in self._vocabularies
-                pass
-            except:
-                pass
+            for source in self._sources:
+                if source.name == vocabulary_name:
+                    vocabulary = source
 
-        print(f"Mapping for {vocabulary.name}:")
+        if vocabulary is None:
+            print("The selected vocabulary does not exist!")
 
         # the ranking of self._vocabularies is based on the best vectors:
+        print(f"Mapping for {vocabulary.name}:")
         best_vector = _Analysis.make_best_vector(vocabulary.levenshtein_vector, self._sensitivity)
         if best_vector is None:
             print("ERROR: Empty mapping!")
