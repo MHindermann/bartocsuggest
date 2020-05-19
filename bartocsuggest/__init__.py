@@ -13,10 +13,11 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
 from os import path
+from datetime import datetime
 from annif_client import AnnifClient
 
 from .utility import _Utility
-from .jskos import _ConceptScheme, _Concordance
+from .jskos import _Concept, _ConceptBundle, _ConceptMapping, _ConceptScheme, _Concordance, _LanguageMap
 
 import Levenshtein
 import requests
@@ -138,13 +139,13 @@ class _Query:
 
         return payload
 
-    def get_response(self, verbose: int = 0) -> Dict:
+    def get_response(self, verbose: bool = False) -> Dict:
         """ Return the query response. """
 
         # fetch response if not available:
         if self._response is None:
             self._send()
-            if verbose == 1:
+            if verbose is True:
                 print(self._response.text)
             return self._response.json()
 
@@ -254,7 +255,8 @@ class Session:
     """ Vocabulary suggestion session using the BARTOC FAST API.
 
     :param words: input words (list of strings or path to XLSX file)
-    :param preload_folder: path to preload folder, defaults to None
+    :param name: the name of the session, defaults to None
+    :param preload_folder: the path to the preload folder, defaults to None
     """
 
     def __init__(self,
@@ -265,7 +267,7 @@ class Session:
         self._sources = []
 
     def _set_input(self, words: Union[list, str, _ConceptScheme]) -> _ConceptScheme:
-        """ Set words as Concept Scheme.
+        """ Set words as concept scheme.
 
         The input words are transformed into a JSKOS Concept Scheme for internal representation.
 
@@ -279,6 +281,8 @@ class Session:
         else:
             scheme = _Utility.load_file(words)
 
+        scheme.uri = "http://123fakestreet.com/" + str(datetime.now()).split(".")[0].replace(" ", "/")
+
         print(f"{words} loaded successfully, {len(scheme.concepts)} words detected.")
         return scheme
 
@@ -288,11 +292,11 @@ class Session:
         # TODO: check for duplicate source before adding
         self._sources.append(source)
 
-    def _get_source(self, name: str) -> Optional[_Source]:
-        """ Return source by name. """
+    def _get_source(self, uri: str) -> Optional[_Source]:
+        """ Return source by URI. """
 
         for source in self._sources:
-            if name == source.name:
+            if uri == source.uri:
                 return source
 
         return None
@@ -372,7 +376,7 @@ class Session:
                 contenders.append(source)
         contenders.sort(key=lambda x: getattr(x.ranking, score_type.__str__()), reverse=high_to_low)
 
-        suggestion = Suggestion(contenders, sensitivity, score_type)
+        suggestion = Suggestion(self._scheme, contenders, sensitivity, score_type)
 
         if verbose is True:
             print(f"Suggestions calculated.")
@@ -656,19 +660,19 @@ class _Source:
     """ A BARTOC FAST source. """
 
     def __init__(self,
-                 name: str,
+                 uri: str,
                  levenshtein_vector: _LevenshteinVector = None,
                  ranking: _Ranking = None) -> None:
-        self.name = name
+        self.uri = uri
         if levenshtein_vector is None:
             self.levenshtein_vector = _LevenshteinVector()
         self.ranking = ranking
 
-    def update_ranking(self, store: Session, sensitivity: int, verbose: bool = False):
+    def update_ranking(self, store: Session, sensitivity: int, verbose: bool = False) -> None:
         """ Update the sources ranking. """
 
         if verbose is True:
-            print(f"Updating {self.name}...")
+            print(f"Updating {self.uri}...")
 
         best_vector = _Analysis.make_best_vector(self.levenshtein_vector, sensitivity)
 
@@ -679,16 +683,24 @@ class _Source:
         self.ranking.recall = _Analysis.make_recall(len(store._scheme.concepts), self.ranking.score_coverage)
 
         if verbose is True:
-            print(f"{self.name} updated.")
+            print(f"{self.uri} updated.")
 
 
 class Suggestion:
-    """ A suggestion of vocabularies. """
+    """ A suggestion of vocabularies.
+
+    :param _scheme: the input concept scheme
+    :param _vocabularies: the suggested vocabularies
+    :param _sensitivity: the used sensitivity
+    :param _score_type: the used score type
+    """
 
     def __init__(self,
+                 _scheme: _ConceptScheme,
                  _vocabularies: List[_Source],
                  _sensitivity: int,
                  _score_type: ScoreType) -> None:
+        self._scheme = _scheme
         self._sources = _vocabularies
         self._sensitivity = _sensitivity
         self._score_type = _score_type
@@ -708,9 +720,9 @@ class Suggestion:
             except TypeError:
                 pass
             if scores is True:
-                results.append([source.name, getattr(source.ranking, self._score_type.__str__())])
+                results.append([source.uri, getattr(source.ranking, self._score_type.__str__())])
             else:
-                results.append(source.name)
+                results.append(source.uri)
 
         return results
 
@@ -720,7 +732,7 @@ class Suggestion:
         print(f"{len(self._sources)} vocabularies given sensitivity {self._sensitivity}."
               f" From best to worst (vocabularies with no matches are excluded):")
         for source in self._sources:
-            print(f"{source.name}, {self._score_type.__str__()}: {getattr(source.ranking, self._score_type.__str__())}")
+            print(f"{source.uri}, {self._score_type.__str__()}: {getattr(source.ranking, self._score_type.__str__())}")
 
     def get_score_type(self) -> ScoreType:
         """ Return the suggestion's score type. """
@@ -732,41 +744,68 @@ class Suggestion:
 
         return self._sensitivity
 
-    # TODO:
-    def get_concordance(self, vocabulary_name: str = None) -> _Concordance:
+    def get_concordance(self, vocabulary_uri: str = None, verbose: bool = False) -> Optional[_Concordance]:
         """ Return the concordance between the input words and the vocabulary.
 
-        If no vocabulary name is selected, the most highly suggested vocabulary is used.
+        If no vocabulary URI is selected, the most highly suggested vocabulary is used.
+        To see the suggested vocabularies and their URIs, use the print method.
 
-        :param vocabulary_name: the name of the vocabulary, defaults to None
+        :param vocabulary_uri: the URI of the vocabulary, defaults to None
+        :param verbose: print concordance to console, defaults to False
         """
 
+        # get the correct source (if any) given vocabulary_name:
         vocabulary = None
-
-        # choose the correct source:
-        if vocabulary_name is None:
+        if vocabulary_uri is None:
             vocabulary = self._sources[0]
         else:
             for source in self._sources:
-                if source.name == vocabulary_name:
+                if source.uri == vocabulary_uri:
                     vocabulary = source
-
         if vocabulary is None:
             print("The selected vocabulary does not exist!")
+            return None
 
-        # the ranking of self._vocabularies is based on the best vectors:
-        print(f"Mapping for {vocabulary.name}:")
+        # make the best vector (on which the ranking of self._vocabularies is based):
         best_vector = _Analysis.make_best_vector(vocabulary.levenshtein_vector, self._sensitivity)
 
         # make concordance:
-        concordance = _Concordance(from_scheme=, to_scheme=)
-        # TODO: input concept scheme should be carried to suggestion...
+        source_scheme = self._scheme
+        target_scheme = _ConceptScheme(uri=vocabulary.uri)
+        concordance = _Concordance(from_scheme=source_scheme, to_scheme=target_scheme, mappings=set())
 
-        # make mappings:
-        if best_vector is None:
-            print("ERROR: Empty mapping!")
-        else:
-            for score in best_vector.get_vector():
-                print(f"{score.searchword} <=> {score.foundword}")
+        # make concept mappings:
+        for score in best_vector.get_vector():
+            source_concept = _Concept(pref_label=_LanguageMap({"und": score.searchword})) # TODO: ACHTUNG already inverted!
+            target_concept = _Concept(pref_label=_LanguageMap({"und": score.foundword})) # TODO: levenshtein score should keep concept with uri etc instead of just foundword!
+            source_member_set = {source_concept}
+            target_member_set = {target_concept}
+            source_bundle = _ConceptBundle(member_set=source_member_set)
+            target_bundle = _ConceptBundle(member_set=target_member_set)
 
+            mapping = _ConceptMapping(from_=source_bundle,
+                                      to=target_bundle,
+                                      from_scheme=source_scheme,
+                                      to_scheme=target_scheme)
 
+            concordance.mappings.add(mapping)
+
+        # TODO: print concordance to console, with appropriate functions
+        if verbose is True:
+            print(f"From {concordance.from_scheme.uri} to {concordance.to_scheme.uri}:")
+            for mapping in concordance.mappings:
+                for source_concept in mapping.from_.member_set:
+                    for target_concept in mapping.to.member_set:
+                        print(f"{source_concept.pref_label.get_value('und')} <=> {target_concept.pref_label.get_value('und')}")
+
+        return concordance
+
+    # TODO: save concordance as JSON-LD
+    def save_concordance(self, vocabulary_uri: str, save_folder: str) -> None:
+        """ Save the concordance between the input words and the vocabulary as JSON-LD to a folder.
+
+        :param vocabulary_uri: the URI of the vocabulary, defaults to None
+        :param save_folder: the path to the save folder
+        """
+
+        pass

@@ -15,6 +15,7 @@ class _LanguageMap:
     def add(self, label: str, language: str):
         """ Add a value for a language"""
 
+        # TODO: this is the wrong way round! Should be language: label
         self._mapping.update({label: language})
 
     def get_value(self, language: str) -> Optional[str]:
@@ -62,7 +63,7 @@ class _Concept(_Item):
                  context: str = None,
                  url: str = None,
                  pref_label: _LanguageMap = None,
-                 inscheme: set = None
+                 inscheme: Set[_ConceptScheme, str] = None
                  ) -> None:
         self.inscheme = inscheme
         super().__init__(uri, type_, context, url, pref_label)
@@ -133,6 +134,7 @@ class _Concordance(_Item):
     def __init__(self,
                  from_scheme: _ConceptScheme,
                  to_scheme: _ConceptScheme,
+                 mappings: Set[_ConceptMapping] = None,
                  uri: str = None,
                  type_: Set[str] = None,
                  context: str = None,
@@ -141,6 +143,7 @@ class _Concordance(_Item):
                  ) -> None:
         self.from_scheme = from_scheme
         self.to_scheme = to_scheme
+        self.mappings = mappings
         super().__init__(uri, type_, context, url, pref_label)
 
 
