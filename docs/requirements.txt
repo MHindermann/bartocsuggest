@@ -5,3 +5,4 @@ python-Levenshtein-wheels>=0.13.1
 Sphinx>=3.0.3
 sphinxcontrib-restbuilder>=0.2
 sphinx-autodoc-typehints>=1.10.3
+annif-client>=0.3.0
