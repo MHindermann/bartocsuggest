@@ -10,6 +10,9 @@ bartocsuggest documentation
    :maxdepth: 2
    :caption: Contents:
 
+Core functionality
+------------------
+
 .. autoclass:: bartocsuggest.Session
    :members:
 
