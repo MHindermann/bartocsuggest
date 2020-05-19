@@ -16,7 +16,7 @@ from os import path
 from annif_client import AnnifClient
 
 from .utility import _Utility
-from .jskos import _ConceptScheme
+from .jskos import _ConceptScheme, _Concordance
 
 import Levenshtein
 import requests
@@ -732,19 +732,18 @@ class Suggestion:
 
         return self._sensitivity
 
-    def get_mapping(self, vocabulary_name: str = None) -> None:
-        """ Return the mapping between the input words and a vocabulary.
+    # TODO:
+    def get_concordance(self, vocabulary_name: str = None) -> _Concordance:
+        """ Return the concordance between the input words and the vocabulary.
 
-        If no vocabulary name is selected, the most highly suggested vocabulary is taken as default.
+        If no vocabulary name is selected, the most highly suggested vocabulary is used.
 
         :param vocabulary_name: the name of the vocabulary, defaults to None
         """
 
-        # TODO: this is the prototype, now the correct JSKOS output is needed http://coli-conc.gbv.de/concordances/wikidata/
-
         vocabulary = None
 
-        # choose the correct vocabulary:
+        # choose the correct source:
         if vocabulary_name is None:
             vocabulary = self._sources[0]
         else:
@@ -758,6 +757,12 @@ class Suggestion:
         # the ranking of self._vocabularies is based on the best vectors:
         print(f"Mapping for {vocabulary.name}:")
         best_vector = _Analysis.make_best_vector(vocabulary.levenshtein_vector, self._sensitivity)
+
+        # make concordance:
+        concordance = _Concordance(from_scheme=, to_scheme=)
+        # TODO: input concept scheme should be carried to suggestion...
+
+        # make mappings:
         if best_vector is None:
             print("ERROR: Empty mapping!")
         else:
