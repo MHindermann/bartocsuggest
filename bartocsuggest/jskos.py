@@ -1,6 +1,6 @@
 """ jskos.py
 
-JSKOS classes. Built based on  https://gbv.github.io/jskos/context.json """
+JSKOS classes. Following the specifications at https://gbv.github.io/jskos/context.json """
 
 from __future__ import annotations
 from typing import Optional, Set, List
@@ -23,6 +23,12 @@ class _LanguageMap:
 
         return self._mapping.get(language)
 
+    def get_dict(self) -> dict:
+        """ bla
+        """
+
+        return self._mapping
+
 
 class _Resource:
     """ http://gbv.github.io/jskos/jskos.html#resource """
@@ -36,6 +42,41 @@ class _Resource:
         self.type_ = type_
         if context is None:
             self.context = "https://gbv.github.io/jskos/context.json"
+
+    def get_dict(self) -> dict:
+        """ bla
+        """
+
+        dictionary = dict()
+        attributes = self.__dict__.keys()
+        for attribute in attributes:
+            value = self.__dict__.get(attribute)
+
+            # throw away:
+            if value is None:
+                pass
+            # base case:
+            elif type(value) is str or type(value) is dict:
+                dictionary.update({attribute: value})
+            # inductive cases:
+            elif type(value) is list:
+                list2dictionary = dict()
+                for element in value:
+                    list2dictionary.update({element: element.get_dict()})
+                dictionary.update(list2dictionary)
+            elif type(value) is set:
+                set2dictionary = dict()
+                for element in value:
+                    set2dictionary.update({element: element.get_dict()})
+                dictionary.update(set2dictionary)
+            # TODO: add _ConceptBundle.get_dict
+            else:
+                # TODO: lists, sets
+                dictionary.update({attribute: value.get_dict()})
+
+        # TODO: correct labels and not internal attribute names
+
+        return dictionary
 
 
 class _Item(_Resource):
@@ -145,6 +186,11 @@ class _Concordance(_Item):
         self.to_scheme = to_scheme
         self.mappings = mappings
         super().__init__(uri, type_, context, url, pref_label)
+
+    def __str__(self):
+
+        output = {"fromScheme": self.from_scheme.__str__(),
+                 "toScheme": self.to_scheme.__str__()}
 
 
 class _TestRessource:

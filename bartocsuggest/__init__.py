@@ -748,7 +748,7 @@ class Suggestion:
         """ Return the concordance between the input words and the vocabulary.
 
         If no vocabulary URI is selected, the most highly suggested vocabulary is used.
-        To see the suggested vocabularies and their URIs, use the print method.
+        To see the suggested vocabularies and their URIs, use the print method of this class.
 
         :param vocabulary_uri: the URI of the vocabulary, defaults to None
         :param verbose: print concordance to console, defaults to False
@@ -798,6 +798,8 @@ class Suggestion:
                     for target_concept in mapping.to.member_set:
                         print(f"{source_concept.pref_label.get_value('und')} <=> {target_concept.pref_label.get_value('und')}")
 
+        print(concordance.get_dict()) # dev
+
         return concordance
 
     # TODO: save concordance as JSON-LD
@@ -808,4 +810,5 @@ class Suggestion:
         :param save_folder: the path to the save folder
         """
 
+        # TODO: format to be used in https://coli-conc.gbv.de/cocoda/app/
         pass
