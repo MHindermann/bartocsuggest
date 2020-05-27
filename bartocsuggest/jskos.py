@@ -23,9 +23,8 @@ class _LanguageMap:
 
         return self._mapping.get(language)
 
-    def get_dict(self) -> dict:
-        """ bla
-        """
+    def get_json(self, ignore: list = None) -> dict:
+        """ Get language map in JSON compatible format. """
 
         return self._mapping
 
@@ -43,40 +42,61 @@ class _Resource:
         if context is None:
             self.context = "https://gbv.github.io/jskos/context.json"
 
-    def get_dict(self, **kwargs) -> dict:
-        """ bla
+    def get_json(self, ignore: list = None) -> dict:
+        """ Get resource in JSON compatible format.
+
+        :param ignore: resource attributes that are ignored
         """
-        # TODO: correct labels and not internal attribute names
+
+        if ignore is None:
+            ignore = []
         dictionary = dict()
         attributes = self.__dict__.keys()
 
-
         for attribute in attributes:
+
+            # define output for different objects (it shouldn't be cluttered):
+            if attribute is "from_scheme":
+                ignore.append("concepts")
+                ignore.append("url")
+
+            # skip if attribute is ignored:
+            if attribute in ignore:
+                continue
+
+            # induction on value of the attribute:
             value = self.__dict__.get(attribute)
-
-            """#debug:
-            print(f"attribute: {attribute}")
-            print(f"value: {value}")
-            print("...")"""
-
-            # null case:
             if value is None:
                 pass
-            # base case:
             elif type(value) is str or type(value) is dict:
-                dictionary.update({attribute: value})
-            # inductive cases:
+                dictionary.update({self.get_string(attribute): value})
             elif type(value) is list or type(value) is set:
                 value_list = list()
                 for element in value:
-                    value_list.append(element.get_dict())
-                dictionary.update({attribute: value_list})
+                    value_list.append(element.get_json(ignore))
+                dictionary.update({self.get_string(attribute): value_list})
             else:
-                dictionary.update({attribute: value.get_dict()})
-
-
+                dictionary.update({self.get_string(attribute): value.get_json(ignore)})
 
         return dictionary
+
+    def get_string(self, attribute: str) -> str:
+        """ Get public name of attribute.
+
+        :param attribute: resource attribute
+        """
+        attribute = attribute.split("_")
+
+        try:
+            if attribute[1] is not "":
+                return attribute[0] + attribute[1].capitalize()  # camel casing
+            else:
+                return attribute[0]
+        except IndexError:
+            if attribute[0] is "context":
+                return "@" + attribute[0]
+            else:
+                return attribute[0]
 
 
 class _Item(_Resource):
@@ -104,9 +124,9 @@ class _Concept(_Item):
                  context: str = None,
                  url: str = None,
                  pref_label: _LanguageMap = None,
-                 inscheme: Set[_ConceptScheme, str] = None
+                 in_scheme: Set[_ConceptScheme, str] = None
                  ) -> None:
-        self.inscheme = inscheme
+        self.in_scheme = in_scheme
         super().__init__(uri, type_, context, url, pref_label)
 
 
@@ -137,16 +157,20 @@ class _ConceptBundle:
                  ) -> None:
         self.member_set = member_set
 
-    def get_dict(self) -> dict:
-        """ bla
+    def get_json(self, ignore: list = None) -> dict:
+        """ Get concept bundle in JSON compatible format.
+
+        :param ignore: resource attributes that are ignored
         """
 
         dictionary = dict()
+
         if self.member_set is None:
             return dictionary
         else:
             for member in self.member_set:
-                dictionary.update(member.get_dict())
+                dictionary.update(member.get_json(ignore))
+
         return dictionary
 
 
