@@ -43,38 +43,38 @@ class _Resource:
         if context is None:
             self.context = "https://gbv.github.io/jskos/context.json"
 
-    def get_dict(self) -> dict:
+    def get_dict(self, **kwargs) -> dict:
         """ bla
         """
-
+        # TODO: correct labels and not internal attribute names
         dictionary = dict()
         attributes = self.__dict__.keys()
+
+
         for attribute in attributes:
             value = self.__dict__.get(attribute)
 
-            # throw away:
+            """#debug:
+            print(f"attribute: {attribute}")
+            print(f"value: {value}")
+            print("...")"""
+
+            # null case:
             if value is None:
                 pass
             # base case:
             elif type(value) is str or type(value) is dict:
                 dictionary.update({attribute: value})
             # inductive cases:
-            elif type(value) is list:
-                list2dictionary = dict()
+            elif type(value) is list or type(value) is set:
+                value_list = list()
                 for element in value:
-                    list2dictionary.update({element: element.get_dict()})
-                dictionary.update(list2dictionary)
-            elif type(value) is set:
-                set2dictionary = dict()
-                for element in value:
-                    set2dictionary.update({element: element.get_dict()})
-                dictionary.update(set2dictionary)
-            # TODO: add _ConceptBundle.get_dict
+                    value_list.append(element.get_dict())
+                dictionary.update({attribute: value_list})
             else:
-                # TODO: lists, sets
                 dictionary.update({attribute: value.get_dict()})
 
-        # TODO: correct labels and not internal attribute names
+
 
         return dictionary
 
@@ -137,6 +137,18 @@ class _ConceptBundle:
                  ) -> None:
         self.member_set = member_set
 
+    def get_dict(self) -> dict:
+        """ bla
+        """
+
+        dictionary = dict()
+        if self.member_set is None:
+            return dictionary
+        else:
+            for member in self.member_set:
+                dictionary.update(member.get_dict())
+        return dictionary
+
 
 class _ConceptMapping(_Item):
     """ https://gbv.github.io/jskos/jskos.html#concept-mappings
@@ -186,11 +198,6 @@ class _Concordance(_Item):
         self.to_scheme = to_scheme
         self.mappings = mappings
         super().__init__(uri, type_, context, url, pref_label)
-
-    def __str__(self):
-
-        output = {"fromScheme": self.from_scheme.__str__(),
-                 "toScheme": self.to_scheme.__str__()}
 
 
 class _TestRessource:

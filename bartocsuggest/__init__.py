@@ -789,6 +789,7 @@ class Suggestion:
                                       to_scheme=target_scheme)
 
             concordance.mappings.add(mapping)
+        print(concordance.mappings)# DEBUG
 
         # TODO: print concordance to console, with appropriate functions
         if verbose is True:
@@ -797,8 +798,6 @@ class Suggestion:
                 for source_concept in mapping.from_.member_set:
                     for target_concept in mapping.to.member_set:
                         print(f"{source_concept.pref_label.get_value('und')} <=> {target_concept.pref_label.get_value('und')}")
-
-        print(concordance.get_dict()) # dev
 
         return concordance
 
