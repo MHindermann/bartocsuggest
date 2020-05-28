@@ -5,8 +5,9 @@ Utility functions. """
 from __future__ import annotations
 from typing import Optional, Dict, List
 from os import path
+from datetime import datetime
 from openpyxl import load_workbook
-from json import dump, load
+from json import dump, dumps, load
 from annif_client import AnnifClient
 
 from .jskos import _Concept, _ConceptScheme, _LanguageMap
@@ -46,7 +47,7 @@ class _Utility:
                 if row[0] is None:
                     continue
                 else:
-                    concept = _Concept(pref_label=_LanguageMap({"en": row[0]}))  # TODO: automate language detection
+                    concept = _Concept(pref_label=_LanguageMap({"und": row[0]}))  # TODO: automate language detection
                     scheme.concepts.append(concept)
 
         return scheme
@@ -57,13 +58,13 @@ class _Utility:
 
         scheme = _ConceptScheme()
         for item in input_list:
-            concept = _Concept(pref_label=_LanguageMap({"en": item}))  # TODO: automate language detection
+            concept = _Concept(pref_label=_LanguageMap({"und": item}))  # TODO: automate language detection
             scheme.concepts.append(concept)
 
         return scheme
 
     @classmethod
-    def annif2jskos(cls, annif_suggestion: List[dict], annif_project_id: str) -> jskos._ConceptScheme:
+    def annif2jskos(cls, annif_suggestion: List[dict], annif_project_id: str) -> _ConceptScheme:
         """ Transform an Annif suggestion to JSKOS.
 
         :param annif_suggestion: the output of calling AnnifClient.suggest
@@ -91,17 +92,21 @@ class _Utility:
         return scheme
 
     @classmethod
-    def save_json(cls, json_object: Dict, preload_folder: str, number: int):
-        """ Save a JSON object to a file.
+    def save_json(cls, dictionary: Dict, folder: str, filename: str = None):
+        """ Save a dictionary as JSON file.
 
-        preload_folder: MUST use complete folder path. """
+        :param dictionary: the dictionary to be saved
+        :param folder: the folder to write the JSON file in (MUST use complete folder path)
+        :param filename: the name of the file, defaults to None
+        """
 
-        filename = preload_folder + f"query_{number}.json"
+        if filename is None:
+            filename = str(datetime.now()).split(".")[0].replace(":", "-")
 
-        with open(filename, "w") as file:
-            dump(json_object, file)
+        full_filename = folder + f"{filename}.json"
+        with open(full_filename, "w") as file:
+            dump(dictionary, file)
 
-        # print(f"{filename} preloaded")
 
     @classmethod
     def load_json(cls, preload_folder: str, number: int) -> Dict:
