@@ -107,15 +107,23 @@ class _Utility:
         with open(full_filename, "w") as file:
             dump(dictionary, file)
 
-
     @classmethod
-    def load_json(cls, preload_folder: str, number: int) -> Dict:
-        """ Load a JSON object as Python dictionary from a file """
+    def load_json(cls, folder: str, filename: str) -> Dict:
+        """ Load a JSON object as dictionary from a file """
 
-        filename = preload_folder + f"query_{number}.json"
+        filename = folder + f"{filename}.json"
 
         with open(filename) as file:
+            dictionary = load(file)
 
-            json_object = load(file)
+            return dictionary
 
-            return json_object
+    @classmethod
+    def print_json(cls, dictionary: dict, indent: int = 2) -> None:
+        """ Print a dictionary as JSON to the console.
+
+        :param dictionary: the dictionary to be printed
+        :param indent: indentation for pretty printing, defaults to 2
+        """
+
+        print(dumps(dictionary, indent=indent))

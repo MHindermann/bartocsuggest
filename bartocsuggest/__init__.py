@@ -320,7 +320,8 @@ class Session:
                 if counter > maximum:  # debug
                     break
                 try:
-                    json_object = _Utility.load_json(self._preload_folder, counter)
+                    filename = f"query_{counter}"
+                    json_object = _Utility.load_json(self._preload_folder, filename)
                     query = _Query.make_query_from_json(json_object)
                     query.update_sources(self)
                     counter += 1
@@ -419,7 +420,7 @@ class Session:
                 print(f"Preloading word number {counter} '{searchword}'...", end=" ")
             query = _Query(searchword)
             response = query.get_response()
-            _Utility.save_json(response, self._preload_folder, counter)
+            _Utility.save_json(response, self._preload_folder, f"query_{counter}")
             counter += 1
             if verbose is True:
                 print(f"done.")
@@ -744,14 +745,13 @@ class Suggestion:
 
         return self._sensitivity
 
-    def get_concordance(self, vocabulary_uri: str = None, verbose: bool = False) -> Optional[_Concordance]:
+    def _get_concordance(self, vocabulary_uri: str = None) -> Optional[_Concordance]:
         """ Return the concordance between the input words and the vocabulary.
 
         If no vocabulary URI is selected, the most highly suggested vocabulary is used.
         To see the suggested vocabularies and their URIs, use the print method of this class.
 
         :param vocabulary_uri: the URI of the vocabulary, defaults to None
-        :param verbose: print concordance to console, defaults to False
         """
 
         # get the correct source (if any) given vocabulary_name:
@@ -776,7 +776,7 @@ class Suggestion:
 
         # make concept mappings:
         for score in best_vector.get_vector():
-            source_concept = _Concept(pref_label=_LanguageMap({"und": score.searchword})) # TODO: ACHTUNG already inverted!
+            source_concept = _Concept(pref_label=_LanguageMap({"und": score.searchword}))
             target_concept = _Concept(pref_label=_LanguageMap({"und": score.foundword})) # TODO: levenshtein score should keep concept with uri etc instead of just foundword!
             source_member_set = {source_concept}
             target_member_set = {target_concept}
@@ -789,25 +789,51 @@ class Suggestion:
                                       to_scheme=target_scheme)
 
             concordance.mappings.add(mapping)
-        print(concordance.mappings)# DEBUG
-
-        # TODO: print concordance to console, with appropriate functions
-        if verbose is True:
-            print(f"From {concordance.from_scheme.uri} to {concordance.to_scheme.uri}:")
-            for mapping in concordance.mappings:
-                for source_concept in mapping.from_.member_set:
-                    for target_concept in mapping.to.member_set:
-                        print(f"{source_concept.pref_label.get_value('und')} <=> {target_concept.pref_label.get_value('und')}")
 
         return concordance
 
-    # TODO: save concordance as JSON-LD
-    def save_concordance(self, vocabulary_uri: str, save_folder: str) -> None:
-        """ Save the concordance between the input words and the vocabulary as JSON-LD to a folder.
+    def print_concordance(self, vocabulary_uri: str = None) -> None:
+        """ Print the concordance as JSKOS to the console.
+
+        The concordance is between the session's input words from which this suggestion was derived and a vocabulary
+        to be chosen by URI. If no vocabulary URI is selected, the most highly suggested vocabulary is used.
+        To see the suggested vocabularies and their URIs, use the print method of this class.
+        For JSKOS, see https://gbv.github.io/jskos/context.json (version 0.4.6).
 
         :param vocabulary_uri: the URI of the vocabulary, defaults to None
-        :param save_folder: the path to the save folder
         """
 
-        # TODO: format to be used in https://coli-conc.gbv.de/cocoda/app/
-        pass
+        concordance = self._get_concordance(vocabulary_uri)
+        _Utility.print_json(concordance.get_dict())
+
+    def save_concordance(self, folder: str, filename: str = None, vocabulary_uri: str = None) -> None:
+        """ Save the concordance as JSKOS in the JSON format.
+
+        :param folder: the path to the save folder
+        :param filename: the name of the file, defaults to None
+        :param vocabulary_uri: the URI of the vocabulary, defaults to None
+        """
+
+        concordance = self._get_concordance(vocabulary_uri)
+        _Utility.save_json(dictionary=concordance.get_dict(), filename=filename, folder=folder)
+
+    def save_mappings(self, folder: str, filename: str = None, vocabulary_uri: str = None) -> None:
+        """ Save the mappings as JSKOS in the NDJSON format.
+
+        Mappings in this format can be used in the Cocoda Mapping Tool, see https://coli-conc.gbv.de/cocoda/app/
+        (version 1.3.6). For NDJSON, see https://github.com/ndjson/ndjson-spec (version 1.0.0).
+
+        :param folder: the path to the save folder
+        :param filename: the name of the file, defaults to None
+        :param vocabulary_uri: the URI of the vocabulary, defaults to None
+        """
+
+        concordance = self._get_concordance(vocabulary_uri)
+
+        if filename is None:
+            filename = str(datetime.now()).split(".")[0].replace(":", "-")
+
+        full_filename = folder + f"{filename}.ndjson"
+        with open(full_filename, "w") as file:
+            for mapping in concordance.mappings:
+                print(f"{mapping.get_dict()}".replace("'", '"').replace(" ", ""), file=file)
