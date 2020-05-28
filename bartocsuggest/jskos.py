@@ -1,6 +1,7 @@
 """ jskos.py
 
-JSKOS classes. Following the specifications at https://gbv.github.io/jskos/context.json """
+JSKOS classes based on the specifications at https://gbv.github.io/jskos/context.json (version 0.4.6).
+All class parameters follow these specifications. """
 
 from __future__ import annotations
 from typing import Optional, Set, List
@@ -15,16 +16,15 @@ class _LanguageMap:
     def add(self, label: str, language: str):
         """ Add a value for a language"""
 
-        # TODO: this is the wrong way round! Should be language: label
-        self._mapping.update({label: language})
+        self._mapping.update({language: label})
 
     def get_value(self, language: str) -> Optional[str]:
         """ Get the value of a language if any """
 
         return self._mapping.get(language)
 
-    def get_json(self, ignore: list = None) -> dict:
-        """ Get language map in JSON compatible format. """
+    def get_dict(self, ignore: list = None) -> dict:
+        """ Get language map as dictionary. """
 
         return self._mapping
 
@@ -42,14 +42,16 @@ class _Resource:
         if context is None:
             self.context = "https://gbv.github.io/jskos/context.json"
 
-    def get_json(self, ignore: list = None) -> dict:
-        """ Get resource in JSON compatible format.
+    def get_dict(self, ignore: list = None) -> dict:
+        """ Get resource as dictionary.
 
-        :param ignore: resource attributes that are ignored
+        Resource is recursively transformed into a dictionary.
+
+        :param ignore: resource attributes that are ignored, defaults to None
         """
 
         if ignore is None:
-            ignore = []
+            ignore = ["context"]
         dictionary = dict()
         attributes = self.__dict__.keys()
 
@@ -64,26 +66,38 @@ class _Resource:
             if attribute in ignore:
                 continue
 
-            # induction on value of the attribute:
+            # recursion on value of the attribute:
             value = self.__dict__.get(attribute)
+
             if value is None:
                 pass
+
             elif type(value) is str or type(value) is dict:
                 dictionary.update({self.get_string(attribute): value})
+
             elif type(value) is list or type(value) is set:
                 value_list = list()
                 for element in value:
-                    value_list.append(element.get_json(ignore))
+                    value_list.append(element.get_dict(ignore))
                 dictionary.update({self.get_string(attribute): value_list})
+
+            elif type(value) is _ConceptBundle:
+                value_list = list()
+                for element in value.member_set:
+                    value_list.append(element.get_dict(ignore))
+                dictionary.update({self.get_string(attribute): {self.get_string("member_set"): value_list}})
+
+            # #TODO: add clauses for cases similar to _ConceptBundle (e.g., _ConceptScheme.concepts)
+
             else:
-                dictionary.update({self.get_string(attribute): value.get_json(ignore)})
+                dictionary.update({self.get_string(attribute): value.get_dict(ignore)})
 
         return dictionary
 
     def get_string(self, attribute: str) -> str:
-        """ Get public name of attribute.
+        """ Get the public name of an attribute.
 
-        :param attribute: resource attribute
+        :param attribute: resource attribute (e.g., uri, type...)
         """
         attribute = attribute.split("_")
 
@@ -147,18 +161,15 @@ class _ConceptScheme(_Item):
 
 
 class _ConceptBundle:
-    """ https://gbv.github.io/jskos/jskos.html#concept-bundles
-
-    :param member_set: concepts in this bundle (unordered)
-    """
+    """ https://gbv.github.io/jskos/jskos.html#concept-bundles """
 
     def __init__(self,
                  member_set: Set[_Concept]
                  ) -> None:
         self.member_set = member_set
 
-    def get_json(self, ignore: list = None) -> dict:
-        """ Get concept bundle in JSON compatible format.
+    def get_dict(self, ignore: list = None) -> dict:
+        """ Get concept bundle as dictionary.
 
         :param ignore: resource attributes that are ignored
         """
@@ -169,19 +180,13 @@ class _ConceptBundle:
             return dictionary
         else:
             for member in self.member_set:
-                dictionary.update(member.get_json(ignore))
+                dictionary.update(member.get_dict(ignore))
 
         return dictionary
 
 
 class _ConceptMapping(_Item):
-    """ https://gbv.github.io/jskos/jskos.html#concept-mappings
-
-    :param from_:
-    :param to:
-    :param from_scheme:
-    :param to_scheme:
-    """
+    """ https://gbv.github.io/jskos/jskos.html#concept-mappings """
 
     def __init__(self,
                  from_: _ConceptBundle,
@@ -202,11 +207,7 @@ class _ConceptMapping(_Item):
 
 
 class _Concordance(_Item):
-    """ https://gbv.github.io/jskos/jskos.html#concordances
-
-    :param from_scheme:
-    :param to_scheme:
-    """
+    """ https://gbv.github.io/jskos/jskos.html#concordances """
 
     def __init__(self,
                  from_scheme: _ConceptScheme,
