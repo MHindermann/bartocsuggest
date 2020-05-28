@@ -31,9 +31,9 @@ def session_from_preload():
     # print suggestion:
     suggestion.print()
 
-    # get the concordance:
-    suggestion.get_concordance(verbose=True)
-    suggestion.get_concordance("psh.ntkcz.cz", verbose=True)
+    # print the concordance:
+    suggestion.print_concordance()
+    suggestion.print_concordance("psh.ntkcz.cz")
 
 
 def session_from_remote():
@@ -45,8 +45,8 @@ def session_from_remote():
     # make suggestion from remote:
     suggestion = session.suggest(remote=True, verbose=False)
 
-    # get the concordance:
-    suggestion.get_concordance("psh.ntkcz.cz", verbose=True)
+    # print the concordance:
+    suggestion.print_concordance("psh.ntkcz.cz")
 
 
 def example_session_owcm():
@@ -74,8 +74,25 @@ def example_annif_session():
     # make suggestion for index:
     suggestion = annif_session.suggest(verbose=True)
 
+    """
     # get the concordance:
     suggestion.get_concordance(verbose=True)
+    """
 
+def test_concordance():
+    """  bla
+    """
 
-session_from_preload()
+    mywords = ["telefon", "wurst"]
+    folder = path.join(DIR, "preload/")
+
+    session = Session(mywords, folder)
+
+    # make suggestion from folder:
+    suggestion = session.suggest(remote=False, verbose=False)
+
+    suggestion.print_concordance()
+    #suggestion.save_mappings(folder=folder)
+    #suggestion.save_concordance(folder)
+
+test_concordance()
