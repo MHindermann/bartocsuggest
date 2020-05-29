@@ -8,6 +8,7 @@ Codebase available at: https://github.com/MHindermann/bartocsuggest
 """
 
 # TODO: update readme with AnnifSession example
+# TODO: update readme with concordance/mappings example
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
@@ -42,7 +43,7 @@ class _Query:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
         self._response = _response
 
-    def _send(self) -> None:
+    def send(self) -> None:
         """ Send query as HTTP request to BARTOC FAST API.
 
          Response is saved in _response."""
@@ -53,9 +54,9 @@ class _Query:
         except requests.exceptions.ConnectionError:
             print(f"requests.exceptions.ConnectionError! Trying again in 5 seconds...")
             sleep(5)
-            self._send()
+            self.send()
 
-    def update_sources(self, store: Session) -> None:
+    def update_sources(self, session: Session) -> None:
         """ Update score vectors of sources based on query response. """
 
         # extract results from response:
@@ -67,16 +68,16 @@ class _Query:
 
         for result in results:
             # get source, add if new:
-            name = self._result2name(result)
-            source = store._get_source(name)
+            name = self.result2name(result)
+            source = session._get_source(name)
             if source is None:
                 source = _Source(name)
-                store._add_source(source)
+                session._add_source(source)
             # update source's score vector:
             searchword = self.searchword
             source.levenshtein_vector.update_score(searchword, result)
 
-    def _result2name(self, result: Dict) -> str:
+    def result2name(self, result: Dict) -> str:
         """ Return source name based on result. """
 
         # TODO: add all relevant sources
@@ -94,15 +95,15 @@ class _Query:
 
         # only aggregated sources need splitting:
         if parsed_uri.netloc in agg_1:
-            return self._uri2name(parsed_uri, n=1)
+            return self.uri2name(parsed_uri, n=1)
         elif parsed_uri.netloc in agg_2:
-            return self._uri2name(parsed_uri, n=2)
+            return self.uri2name(parsed_uri, n=2)
         elif parsed_uri.netloc in agg_5:
-            return self._uri2name(parsed_uri, n=5)
+            return self.uri2name(parsed_uri, n=5)
         else:
             return parsed_uri.netloc
 
-    def _uri2name(self, parsed_uri: urllib.parse.ParseResult, n: int = 1) -> str:
+    def uri2name(self, parsed_uri: urllib.parse.ParseResult, n: int = 1) -> str:
         """ Return source name based on parsed URI.
 
         :param parsed_uri: the path
@@ -144,7 +145,7 @@ class _Query:
 
         # fetch response if not available:
         if self._response is None:
-            self._send()
+            self.send()
             if verbose is True:
                 print(self._response.text)
             return self._response.json()
@@ -255,7 +256,6 @@ class Session:
     """ Vocabulary suggestion session using the BARTOC FAST API.
 
     :param words: input words (list of strings or path to XLSX file)
-    :param name: the name of the session, defaults to None
     :param preload_folder: the path to the preload folder, defaults to None
     """
 
@@ -289,7 +289,6 @@ class Session:
     def _add_source(self, source: _Source) -> None:
         """ Add a source to the store. """
 
-        # TODO: check for duplicate source before adding
         self._sources.append(source)
 
     def _get_source(self, uri: str) -> Optional[_Source]:
