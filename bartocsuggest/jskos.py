@@ -121,11 +121,17 @@ class _Item(_Resource):
                  type_: Set[str] = None,
                  context: str = None,
                  url: str = None,
-                 pref_label: _LanguageMap = None
+                 pref_label: _LanguageMap = None,
+                 alt_label: _LanguageMap = None,
+                 hidden_label: _LanguageMap = None,
+                 definition: _LanguageMap = None
                  ) -> None:
         if url is None:
             self.url = uri
         self.pref_label = pref_label
+        self.alt_label = alt_label
+        self.hidden_label = hidden_label
+        self.definition = definition
         super().__init__(uri, type_, context)
 
 
@@ -138,10 +144,13 @@ class _Concept(_Item):
                  context: str = None,
                  url: str = None,
                  pref_label: _LanguageMap = None,
+                 alt_label: _LanguageMap = None,
+                 hidden_label: _LanguageMap = None,
+                 definition: _LanguageMap = None,
                  in_scheme: Set[_ConceptScheme, str] = None
                  ) -> None:
         self.in_scheme = in_scheme
-        super().__init__(uri, type_, context, url, pref_label)
+        super().__init__(uri, type_, context, url, pref_label, alt_label, hidden_label, definition)
 
 
 class _ConceptScheme(_Item):

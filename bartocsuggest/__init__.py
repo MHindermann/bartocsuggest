@@ -9,6 +9,7 @@ Codebase available at: https://github.com/MHindermann/bartocsuggest
 
 # TODO: update readme with AnnifSession example
 # TODO: update readme with concordance/mappings example
+# TODO: BARTOC response/results/result should be its own class
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
@@ -27,37 +28,99 @@ import urllib.parse
 FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api"
 
 
+class _Result:
+    """ A BARTOC FAST result.
+
+    :param uri:
+    :param pref_label:
+    :param alt_label:
+    :param hidden_label:
+    :param definition:
+    """
+
+    def __init__(self,
+                 uri: str,
+                 pref_label: str = None,
+                 alt_label: str = None,
+                 hidden_label: str = None,
+                 definition: str = None) -> None:
+        self.uri = uri
+        self.pref_label = pref_label
+        self.alt_label = alt_label
+        self.hidden_label = hidden_label
+        self.definition = definition
+
+    def get_concept(self) -> _Concept:
+        """ Return the result as JSKOS concept. """
+
+        # TODO: update BARTOC FAST API to return proper format
+        # https://pypi.org/project/langdetect/
+
+        concept = _Concept(uri=self.uri)
+        labels = ["pref_label", "alt_label", "hidden_label", "definition"]  # i.e., relevant attributes
+
+        for label in labels:
+            label_value = self.__getattribute__(label)
+            if label_value is None:
+                continue
+            else:
+                concept.__setattr__(label, _LanguageMap({"und": label_value}))
+
+        return concept
+
 class _Query:
-    """ A BARTOC FAST query """
+    """ A BARTOC FAST query, see https://bartoc-fast.ub.unibas.ch/bartocfast/api (version 1.0.3).
+
+     :param searchword:
+     :param maxsearchtime:
+     :param duplicates:
+     :param disabled:
+     :param response:
+     """
 
     def __init__(self,
                  searchword: str,
                  maxsearchtime: int = 5,
                  duplicates: bool = True,
                  disabled: List[str] = None,
-                 _response: Union[Dict, requests.models.Response] = None) -> None:
+                 response: Union[Dict, requests.models.Response] = None) -> None:
         self.searchword = searchword
         self.maxsearchtime = maxsearchtime
         self.duplicates = duplicates
         if disabled is None:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
-        self._response = _response
+        self.response = response
 
     def send(self) -> None:
-        """ Send query as HTTP request to BARTOC FAST API.
-
-         Response is saved in _response."""
+        """ Send query as HTTP request to BARTOC FAST API; the response is saved to the response attribute. """
 
         payload = self.get_payload()
         try:
-            self._response = requests.get(url=FAST_API, params=payload)
+            self.response = requests.get(url=FAST_API, params=payload)
         except requests.exceptions.ConnectionError:
             print(f"requests.exceptions.ConnectionError! Trying again in 5 seconds...")
             sleep(5)
             self.send()
 
+    def dict2result(self, dictionary: dict) -> _Result:
+        """ Transform a raw result into a result object.
+
+        :param dictionary: the raw result
+        """
+
+        result = _Result(uri=dictionary.get("uri"),
+                         pref_label=dictionary.get("prefLabel"),
+                         alt_label=dictionary.get("altLabel"),
+                         hidden_label=dictionary.get("hiddenLabel"),
+                         definition=dictionary.get("definition"))
+
+        return result
+
     def update_sources(self, session: Session) -> None:
-        """ Update score vectors of sources based on query response. """
+        """ Update the score vectors of a session's sources based on the query response.
+
+        :param session: the active session
+        """
 
         # extract results from response:
         response = self.get_response()
@@ -74,8 +137,7 @@ class _Query:
                 source = _Source(name)
                 session._add_source(source)
             # update source's score vector:
-            searchword = self.searchword
-            source.levenshtein_vector.update_score(searchword, result)
+            source.levenshtein_vector.update_score(self.searchword, self.dict2result(result))
 
     def result2name(self, result: Dict) -> str:
         """ Return source name based on result. """
@@ -144,19 +206,19 @@ class _Query:
         """ Return the query response. """
 
         # fetch response if not available:
-        if self._response is None:
+        if self.response is None:
             self.send()
             if verbose is True:
-                print(self._response.text)
-            return self._response.json()
+                print(self.response.text)
+            return self.response.json()
 
         # response is cached:
-        elif self._response is requests.models.Response:
-            return self._response.json()
+        elif self.response is requests.models.Response:
+            return self.response.json()
 
         # response is preloaded:
         else:
-            return self._response
+            return self.response
 
     @classmethod
     def make_query_from_json(cls, json_object: Dict) -> Optional[_Query]:
@@ -178,7 +240,7 @@ class _Query:
             else:
                 duplicates = False
             disabled = parsed_query.get("disabled")
-            query = _Query(searchword, int(maxsearchtime), duplicates, disabled, _response=json_object)
+            query = _Query(searchword, int(maxsearchtime), duplicates, disabled, response=json_object)
         except IndexError:
             return None
 
@@ -287,7 +349,10 @@ class Session:
         return scheme
 
     def _add_source(self, source: _Source) -> None:
-        """ Add a source to the store. """
+        """ Add a source to the session.
+
+         :param source: the source to be added
+         """
 
         self._sources.append(source)
 
@@ -490,20 +555,20 @@ class AnnifSession(Session):
 class _Score:
     """ A score.
 
-    The value is derived by a comparison between a search word and a found word elsewhere.
+    The score's value is derived by a comparison between a search word and a result (computed elsewhere).
 
     :param value: the score's numerical value, defaults to None
-    :param searchword: the search word, defaults to None
-    :param foundword: the found word, defaults to None
+    :param searchword: the comparandum, defaults to None
+    :param result: the comparans, defaults to None
     """
 
     def __init__(self,
                  value: int = None,
                  searchword: str = None,
-                 foundword: str = None) -> None:
+                 result: _Result = None) -> None:
         self.value = value
         self.searchword = searchword
-        self.foundword = foundword
+        self.result = result
 
 
 class _Vector:
@@ -528,7 +593,7 @@ class _Vector:
 class _LevenshteinVector(_Vector):
     """ A vector of Levenshtein distance scores """
 
-    def make_score(self, searchword: str, result: dict) -> Optional[_Score]:
+    def make_score(self, searchword: str, result: _Result) -> Optional[_Score]:
         """ Make the Levenshtein score for a result.
 
         The Levenshtein score is the minimum Levenshtein distance over all labels and languages.
@@ -538,17 +603,17 @@ class _LevenshteinVector(_Vector):
         """
 
         scores = []
-        labels = ["prefLabel", "altLabel", "hiddenLabel", "definition"]
+        labels = ["pref_label", "alt_label", "hidden_label", "definition"]  # i.e., relevant attributes
 
         for label in labels:
-            labelstring = result.get(label)
-            if labelstring is None:
+            label_string = result.__getattribute__(label)
+            if label_string is None:
                 continue
             distances = []
-            # check if labelstring has more than one language:
-            for foundword in labelstring.split(";"):
+            # check if label_string has more than one language:
+            for foundword in label_string.split(";"):
                 distance = Levenshtein.distance(searchword.lower(), foundword.lower())
-                distances.append((distance,foundword))
+                distances.append((distance, foundword))
             # add the best foundword and distance tuple per label over all languages:
             scores.append(min(distances))
 
@@ -558,10 +623,14 @@ class _LevenshteinVector(_Vector):
         except ValueError:
             return None
 
-        return _Score(value=min(scores)[0], searchword=searchword, foundword=min(scores)[1])
+        return _Score(value=min(scores)[0], searchword=searchword, result=result)
 
-    def update_score(self, searchword: str, result: dict) -> None:
-        """ Update the Levenshtein vector with the Levenshtein score from searchword and result. """
+    def update_score(self, searchword: str, result: _Result) -> None:
+        """ Update the Levenshtein vector with the Levenshtein score from searchword and result.
+
+        :param searchword: the word from which the distance is measured
+        :param result: contains matches to which the distance is measured
+        """
 
         score = self.make_score(searchword, result)
         if score is None:
@@ -668,7 +737,7 @@ class _Source:
             self.levenshtein_vector = _LevenshteinVector()
         self.ranking = ranking
 
-    def update_ranking(self, store: Session, sensitivity: int, verbose: bool = False) -> None:
+    def update_ranking(self, session: Session, sensitivity: int, verbose: bool = False) -> None:
         """ Update the sources ranking. """
 
         if verbose is True:
@@ -680,7 +749,7 @@ class _Source:
         self.ranking.score_sum = _Analysis.make_score_sum(best_vector)
         self.ranking.score_average = _Analysis.make_score_average(best_vector)
         self.ranking.score_coverage = _Analysis.make_score_coverage(best_vector)
-        self.ranking.recall = _Analysis.make_recall(len(store._scheme.concepts), self.ranking.score_coverage)
+        self.ranking.recall = _Analysis.make_recall(len(session._scheme.concepts), self.ranking.score_coverage)
 
         if verbose is True:
             print(f"{self.uri} updated.")
@@ -776,7 +845,9 @@ class Suggestion:
         # make concept mappings:
         for score in best_vector.get_vector():
             source_concept = _Concept(pref_label=_LanguageMap({"und": score.searchword}))
-            target_concept = _Concept(pref_label=_LanguageMap({"und": score.foundword})) # TODO: levenshtein score should keep concept with uri etc instead of just foundword!
+            # transform result into concept, next line is incorrect (was score.foundword)
+            # add missing attibutes to jskos._Item
+            target_concept = score.result.get_concept()
             source_member_set = {source_concept}
             target_member_set = {target_concept}
             source_bundle = _ConceptBundle(member_set=source_member_set)

@@ -3,7 +3,7 @@
 Utility functions. """
 
 from __future__ import annotations
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 from os import path
 from datetime import datetime
 from openpyxl import load_workbook
@@ -39,7 +39,7 @@ class _Utility:
 
     @classmethod
     def xlsx2jskos(cls, workbook) -> _ConceptScheme:
-        """ Transform XLSX to JSKOS """
+        """ Transform XLSX to JSKOS. """
 
         scheme = _ConceptScheme()
         for worksheet in workbook:
@@ -54,7 +54,7 @@ class _Utility:
 
     @classmethod
     def list2jskos(cls, input_list: list) -> _ConceptScheme:
-        """ Transform list to JSKOS """
+        """ Transform list to JSKOS. """
 
         scheme = _ConceptScheme()
         for item in input_list:
