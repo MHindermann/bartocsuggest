@@ -9,7 +9,6 @@ Codebase available at: https://github.com/MHindermann/bartocsuggest
 
 # TODO: update readme with AnnifSession example
 # TODO: update readme with concordance/mappings example
-# TODO: BARTOC response/results/result should be its own class
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
@@ -31,11 +30,11 @@ FAST_API = "https://bartoc-fast.ub.unibas.ch/bartocfast/api"
 class _Result:
     """ A BARTOC FAST result.
 
-    :param uri:
-    :param pref_label:
-    :param alt_label:
-    :param hidden_label:
-    :param definition:
+    :param uri: the result's URI
+    :param pref_label: https://www.w3.org/2009/08/skos-reference/skos.html#prefLabel, defaults to None
+    :param alt_label: https://www.w3.org/2009/08/skos-reference/skos.html#altLabel, defaults to None
+    :param hidden_label: https://www.w3.org/2009/08/skos-reference/skos.html#hiddenLabel, defaults to None
+    :param definition: https://www.w3.org/2009/08/skos-reference/skos.html#definition, defaults to None
     """
 
     def __init__(self,
@@ -53,9 +52,6 @@ class _Result:
     def get_concept(self) -> _Concept:
         """ Return the result as JSKOS concept. """
 
-        # TODO: update BARTOC FAST API to return proper format
-        # https://pypi.org/project/langdetect/
-
         concept = _Concept(uri=self.uri)
         labels = ["pref_label", "alt_label", "hidden_label", "definition"]  # i.e., relevant attributes
 
@@ -68,14 +64,15 @@ class _Result:
 
         return concept
 
+
 class _Query:
     """ A BARTOC FAST query, see https://bartoc-fast.ub.unibas.ch/bartocfast/api (version 1.0.3).
 
-     :param searchword:
-     :param maxsearchtime:
-     :param duplicates:
-     :param disabled:
-     :param response:
+     :param searchword: the search word
+     :param maxsearchtime: the threshold search time in seconds, defaults to 5
+     :param duplicates: toggle keeping duplicates between resources, defaults to True
+     :param disabled: the disabled resources, defaults to None
+     :param response: the query response, defaults to None
      """
 
     def __init__(self,
@@ -129,7 +126,10 @@ class _Query:
         if results is None:
             return None
 
-        for result in results:
+        for dictionary in results:
+
+            # transform raw result into object:
+            result = self.dict2result(dictionary)
             # get source, add if new:
             name = self.result2name(result)
             source = session._get_source(name)
@@ -137,36 +137,29 @@ class _Query:
                 source = _Source(name)
                 session._add_source(source)
             # update source's score vector:
-            source.levenshtein_vector.update_score(self.searchword, self.dict2result(result))
+            source.levenshtein_vector.update_score(self.searchword, result)
 
-    def result2name(self, result: Dict) -> str:
-        """ Return source name based on result. """
+    def result2name(self, result: _Result) -> str:
+        """ Return source name based on result.
 
-        # TODO: add all relevant sources
-        # define (categories of) aggregated sources:
-        agg_1 = ["bartoc-skosmos.unibas.ch",
-                 "data.ub.uio.no",
-                 "vocab.getty.edu"]
-        agg_2 = ["isl.ics.forth.gr,"
-                 "linkeddata.ge.imati.cnr.it",
-                 "www.yso.fi"]
-        agg_5 = ["vocabs.ands.org.au"]
+         :param result: a result
+         """
+        parsed_uri = urllib.parse.urlparse(result.uri)
 
-        uri = result.get("uri")
-        parsed_uri = urllib.parse.urlparse(uri)
-
-        # only aggregated sources need splitting:
-        if parsed_uri.netloc in agg_1:
+        # define (categories of) aggregated sources and split them accordingly:
+        if parsed_uri.netloc in ["bartoc-skosmos.unibas.ch", "data.ub.uio.no", "vocab.getty.edu"]:
             return self.uri2name(parsed_uri, n=1)
-        elif parsed_uri.netloc in agg_2:
+        elif parsed_uri.netloc in ["isl.ics.forth.gr", "linkeddata.ge.imati.cnr.it", "www.yso.fi"]:
             return self.uri2name(parsed_uri, n=2)
-        elif parsed_uri.netloc in agg_5:
+        elif parsed_uri.netloc in ["vocabs.ands.org.au"]:
             return self.uri2name(parsed_uri, n=5)
         else:
             return parsed_uri.netloc
 
     def uri2name(self, parsed_uri: urllib.parse.ParseResult, n: int = 1) -> str:
-        """ Return source name based on parsed URI.
+        """ Return the source name based on the parsed URI.
+
+        The source name is a substring of the URI.
 
         :param parsed_uri: the path
         :param n: the number of identifying components on the path
@@ -188,7 +181,7 @@ class _Query:
         return name
 
     def get_payload(self) -> Dict:
-        """ Return the payload (parameters passed in URL) of the query. """
+        """ Return the payload (i.e., parameters passed in the URL) of the query. """
 
         if self.duplicates is True:
             duplicates = "on"
@@ -456,7 +449,8 @@ class Session:
         """ Preload responses.
 
         For each word in :attr:`self.words`, a query is sent to the BARTOC FAST API.
-        The response is saved to :attr:`self.preload_folder`. Use this method for batchwise handling of large (>100) :attr:`self.words`.
+        The response is saved to :attr:`self.preload_folder`. Use this method for batchwise handling of large
+        (>100) :attr:`self.words`.
 
         :param max: stop with the max-th word in self.words, defaults to 100000
         :param min: start with min-th word in self.words, defaults to 0
@@ -844,9 +838,9 @@ class Suggestion:
 
         # make concept mappings:
         for score in best_vector.get_vector():
+            # TODO: source_concept needs uri: should be added when creating session from words,
+            #  then send it with vector similar to target_concept; also add notation for cocoda
             source_concept = _Concept(pref_label=_LanguageMap({"und": score.searchword}))
-            # transform result into concept, next line is incorrect (was score.foundword)
-            # add missing attibutes to jskos._Item
             target_concept = score.result.get_concept()
             source_member_set = {source_concept}
             target_member_set = {target_concept}
