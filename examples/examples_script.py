@@ -92,7 +92,8 @@ def test_concordance():
     suggestion = session.suggest(remote=False, verbose=False)
 
     suggestion.print_concordance()
-    #suggestion.save_mappings(folder=folder)
+    suggestion.save_mappings(folder=folder)
     #suggestion.save_concordance(folder)
 
+session_make_preload()
 test_concordance()

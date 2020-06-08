@@ -17,10 +17,12 @@ class _Utility:
     """ Utility functions """
 
     @classmethod
-    def load_file(cls, filename: str) -> Optional[_ConceptScheme]:
+    def load_file(cls, filename: str, language: str = "und") -> Optional[_ConceptScheme]:
         """ Load a file.
 
-        filename: MUST use complete file path. """
+        :param filename: the name of the file including its complete path
+        :param language: the language of the words given as RFC 3066 language tag, defaults to "und"
+        """
 
         # stop if file does not exist
         if path.exists(filename) is False:
@@ -30,7 +32,7 @@ class _Utility:
         # choose method depending on file type:
         if filename.endswith(".xlsx"):
             workbook = load_workbook(filename)
-            return cls.xlsx2jskos(workbook)
+            return cls.xlsx2jskos(workbook, language)
         elif filename.endswith(".json"):
             # TODO: add JSON support
             pass
@@ -38,8 +40,14 @@ class _Utility:
             pass
 
     @classmethod
-    def xlsx2jskos(cls, workbook) -> _ConceptScheme:
-        """ Transform XLSX to JSKOS. """
+    def xlsx2jskos(cls, workbook, language: str = "und") -> _ConceptScheme:
+        """ Transform a XLSX workbook into a JSKOS concept scheme.
+
+        The XLSX workbook's data structure MUST be as follows: one column with one row per word.
+
+        :param workbook: the XLSX workbook
+        :param language: the language of the words given as RFC 3066 language tag, defaults to "und"
+        """
 
         scheme = _ConceptScheme()
         for worksheet in workbook:
@@ -47,18 +55,22 @@ class _Utility:
                 if row[0] is None:
                     continue
                 else:
-                    concept = _Concept(pref_label=_LanguageMap({"und": row[0]}))  # TODO: automate language detection
+                    concept = _Concept(pref_label=_LanguageMap({language.lower(): row[0]}))
                     scheme.concepts.append(concept)
 
         return scheme
 
     @classmethod
-    def list2jskos(cls, input_list: list) -> _ConceptScheme:
-        """ Transform list to JSKOS. """
+    def list2jskos(cls, input_list: list, language: str = "und") -> _ConceptScheme:
+        """ Transform the list into a JSKOS concept scheme.
+
+        :param input_list: the list of words
+        :param language: the language of the words given as RFC 3066 language tag, defaults to "und"
+        """
 
         scheme = _ConceptScheme()
         for item in input_list:
-            concept = _Concept(pref_label=_LanguageMap({"und": item}))  # TODO: automate language detection
+            concept = _Concept(pref_label=_LanguageMap({language.lower(): item}))
             scheme.concepts.append(concept)
 
         return scheme

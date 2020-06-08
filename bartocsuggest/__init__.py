@@ -310,27 +310,30 @@ class Sum(ScoreType):
 class Session:
     """ Vocabulary suggestion session using the BARTOC FAST API.
 
-    :param words: input words (list of strings or path to XLSX file)
+    :param words: the input words (list of strings, or path to XLSX file, or JSKOS concept scheme)
     :param preload_folder: the path to the preload folder, defaults to None
+    :param language: the language of the words given as RFC 3066 language tag, defaults to "und" (for undefined)
     """
 
     def __init__(self,
                  words: Union[List[str], str, _ConceptScheme],
-                 preload_folder: str = None) -> None:
-        self._scheme = self._set_input(words)
+                 preload_folder: str = None,
+                 language: str = "und") -> None:
+        self._scheme = self._set_input(words, language)
         self._preload_folder = preload_folder
         self._sources = []
 
-    def _set_input(self, words: Union[list, str, _ConceptScheme]) -> _ConceptScheme:
-        """ Set words as concept scheme.
+    def _set_input(self, words: Union[list, str, _ConceptScheme], language) -> _ConceptScheme:
+        """ Set words as JSKOS concept scheme.
 
-        The input words are transformed into a JSKOS Concept Scheme for internal representation.
+        If the words are not yet a JSKOS concept scheme, they are transformed into one.
 
-        :param words: either a list, or a filename (MUST use complete filepath).
+        :param words: the input words (list of strings, or path to XLSX file, or JSKOS concept scheme)
+        :param language: the language of the words given as RFC 3066 language tag, defaults to "und"
         """
 
         if type(words) is list:
-            scheme = _Utility.list2jskos(words)
+            scheme = _Utility.list2jskos(words, language)
         elif type(words) is _ConceptScheme:
             scheme = words
         else:
@@ -391,7 +394,7 @@ class Session:
                 if counter > maximum:  # debug
                     break
                 # TODO: generalize this for multi-language support
-                searchword = concept.pref_label.get_value("en")
+                searchword = concept.pref_label.get_value("en") # pick correct language; also, it would make more sense to use uri...
                 if verbose is True:
                     print(f"Word being fetched is {searchword}")
                 query = _Query(searchword)
