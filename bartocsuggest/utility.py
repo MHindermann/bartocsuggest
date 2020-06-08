@@ -32,7 +32,7 @@ class _Utility:
         # choose method depending on file type:
         if filename.endswith(".xlsx"):
             workbook = load_workbook(filename)
-            return cls.xlsx2jskos(workbook, language)
+            return cls.xlsx2scheme(workbook, language)
         elif filename.endswith(".json"):
             # TODO: add JSON support
             pass
@@ -40,7 +40,7 @@ class _Utility:
             pass
 
     @classmethod
-    def xlsx2jskos(cls, workbook, language: str = "und") -> _ConceptScheme:
+    def xlsx2scheme(cls, workbook, language: str = "und") -> _ConceptScheme:
         """ Transform a XLSX workbook into a JSKOS concept scheme.
 
         The XLSX workbook's data structure MUST be as follows: one column with one row per word.
@@ -49,31 +49,78 @@ class _Utility:
         :param language: the language of the words given as RFC 3066 language tag, defaults to "und"
         """
 
-        scheme = _ConceptScheme()
+        words = []
         for worksheet in workbook:
             for row in worksheet.iter_rows(min_row=1, min_col=1, max_col=1, values_only=True):
                 if row[0] is None:
                     continue
                 else:
-                    concept = _Concept(pref_label=_LanguageMap({language.lower(): row[0]}))
-                    scheme.concepts.append(concept)
+                    words.append(row[0])
+
+        return cls.words2scheme(words=words, language=language)
+
+    @classmethod
+    def words2scheme(cls,
+                     words: List[str],
+                     uri: str = None,
+                     name: str = None,
+                     language: str = "und") -> _ConceptScheme:
+        """ Transform a list of words into a JSKOS concept scheme.
+
+        :param words: the input words
+        :param uri: the URI of the concept scheme, defaults to None
+        :param name: the name of the concept scheme, defaults to None
+        :param language: the language of the concept scheme given as RFC 3066 language tag, defaults to "und"
+        """
+
+        # make the concept scheme:
+        if name is None:
+            name = datetime.now().toordinal()
+        if uri is None:
+            uri = f"bartocsuggest:concept-scheme/{name}?language={language}"
+        scheme = _ConceptScheme(uri=uri, pref_label=_LanguageMap({language.lower(): name}))
+
+        # add the concepts:
+        counter = 1
+        for word in words:
+            concept = cls.word2concept(word=word, scheme_uri=scheme.uri, language=language, notation=str(counter))
+            scheme.concepts.append(concept)
+            counter =+ 1
 
         return scheme
 
     @classmethod
-    def list2jskos(cls, input_list: list, language: str = "und") -> _ConceptScheme:
-        """ Transform the list into a JSKOS concept scheme.
+    def word2concept(cls, word: str, scheme_uri: str, language: str = "und", notation: str = None) -> _Concept:
+        """ Transfom a word into as JSKOS concept.
 
-        :param input_list: the list of words
-        :param language: the language of the words given as RFC 3066 language tag, defaults to "und"
+        :param word: the input word
+        :param scheme_uri: the URI of the concept scheme
+        :param language: the language of the word given as RFC 3066 language tag, defaults to "und"
+        :param notation: the notation of the word, defaults to None
         """
 
-        scheme = _ConceptScheme()
-        for item in input_list:
-            concept = _Concept(pref_label=_LanguageMap({language.lower(): item}))
-            scheme.concepts.append(concept)
+        uri = f"bartocsuggest:concept/{cls.word2uri(word, language)}?language={language}"
+        concept = _Concept(uri=uri,
+                           pref_label=_LanguageMap({language.lower(): word}),
+                           in_scheme=set(scheme_uri))
+        if notation is not None:
+            concept.notation = [notation]
 
-        return scheme
+        return concept
+
+    @classmethod
+    def word2uri(cls, word: str, language: str = "und") -> str:
+        """ Transform a word into a URI.
+
+        :param word: the input word
+        :param language: the language of the word given as RFC 3066 language tag, defaults to "und"
+        """
+
+        replacements = {" ": "-", "/": "-"}
+        for key, value in replacements.items():
+            word = word.replace(key, value)
+
+        return f"bartocsuggest:concept/{word}?language={language}"
 
     @classmethod
     def annif2jskos(cls, annif_suggestion: List[dict], annif_project_id: str) -> _ConceptScheme:

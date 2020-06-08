@@ -333,13 +333,13 @@ class Session:
         """
 
         if type(words) is list:
-            scheme = _Utility.list2jskos(words, language)
+            scheme = _Utility.words2scheme(words=words, language=language)
         elif type(words) is _ConceptScheme:
             scheme = words
         else:
             scheme = _Utility.load_file(words)
 
-        scheme.uri = "http://123fakestreet.com/" + str(datetime.now()).split(".")[0].replace(" ", "/")
+        #scheme.uri = "http://123fakestreet.com/" + str(datetime.now()).split(".")[0].replace(" ", "/")
 
         print(f"{words} loaded successfully, {len(scheme.concepts)} words detected.")
         return scheme
@@ -394,7 +394,7 @@ class Session:
                 if counter > maximum:  # debug
                     break
                 # TODO: generalize this for multi-language support
-                searchword = concept.pref_label.get_value("en") # pick correct language; also, it would make more sense to use uri...
+                searchword = concept.pref_label.get_value("und") # pick correct language; also, it would make more sense to use uri...
                 if verbose is True:
                     print(f"Word being fetched is {searchword}")
                 query = _Query(searchword)
@@ -476,7 +476,7 @@ class Session:
                 counter += 1
                 continue
 
-            searchword = concept.pref_label.get_value("en")
+            searchword = concept.pref_label.get_value("und") # pick correct language
             if verbose is True:
                 print(f"Preloading word number {counter} '{searchword}'...", end=" ")
             query = _Query(searchword)

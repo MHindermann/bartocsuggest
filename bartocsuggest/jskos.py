@@ -87,7 +87,7 @@ class _Resource:
                     value_list.append(element.get_dict(ignore))
                 dictionary.update({self.get_string(attribute): {self.get_string("member_set"): value_list}})
 
-            # #TODO: add clauses for cases similar to _ConceptBundle (e.g., _ConceptScheme.concepts)
+            # TODO: add clauses for cases similar to _ConceptBundle (e.g., _ConceptScheme.concepts)
 
             else:
                 dictionary.update({self.get_string(attribute): value.get_dict(ignore)})
@@ -121,6 +121,7 @@ class _Item(_Resource):
                  type_: Set[str] = None,
                  context: str = None,
                  url: str = None,
+                 notation: List[str] = None,
                  pref_label: _LanguageMap = None,
                  alt_label: _LanguageMap = None,
                  hidden_label: _LanguageMap = None,
@@ -128,11 +129,14 @@ class _Item(_Resource):
                  ) -> None:
         if url is None:
             self.url = uri
+        self.notation = notation
         self.pref_label = pref_label
         self.alt_label = alt_label
         self.hidden_label = hidden_label
         self.definition = definition
-        super().__init__(uri, type_, context)
+        super().__init__(uri=uri,
+                         type_=type_,
+                         context=context)
 
 
 class _Concept(_Item):
@@ -143,6 +147,7 @@ class _Concept(_Item):
                  type_: Set[str] = None,
                  context: str = None,
                  url: str = None,
+                 notation: List[str] = None,
                  pref_label: _LanguageMap = None,
                  alt_label: _LanguageMap = None,
                  hidden_label: _LanguageMap = None,
@@ -150,7 +155,15 @@ class _Concept(_Item):
                  in_scheme: Set[_ConceptScheme, str] = None
                  ) -> None:
         self.in_scheme = in_scheme
-        super().__init__(uri, type_, context, url, pref_label, alt_label, hidden_label, definition)
+        super().__init__(uri=uri,
+                         type_=type_,
+                         context=context,
+                         url=url,
+                         notation=notation,
+                         pref_label=pref_label,
+                         alt_label=alt_label,
+                         hidden_label=hidden_label,
+                         definition=definition)
 
 
 class _ConceptScheme(_Item):
@@ -166,7 +179,11 @@ class _ConceptScheme(_Item):
                  ) -> None:
         if concepts is None:
             self.concepts = []
-        super().__init__(uri, type_, context, url, pref_label)
+        super().__init__(uri=uri,
+                         type_=type_,
+                         context=context,
+                         url=url,
+                         pref_label=pref_label)
 
 
 class _ConceptBundle:
@@ -212,7 +229,11 @@ class _ConceptMapping(_Item):
         self.to = to
         self.from_scheme = from_scheme
         self.to_scheme = to_scheme
-        super().__init__(uri, type_, context, url, pref_label)
+        super().__init__(uri=uri,
+                         type_=type_,
+                         context=context,
+                         url=url,
+                         pref_label=pref_label)
 
 
 class _Concordance(_Item):
@@ -231,7 +252,11 @@ class _Concordance(_Item):
         self.from_scheme = from_scheme
         self.to_scheme = to_scheme
         self.mappings = mappings
-        super().__init__(uri, type_, context, url, pref_label)
+        super().__init__(uri=uri,
+                         type_=type_,
+                         context=context,
+                         url=url,
+                         pref_label=pref_label)
 
 
 class _TestRessource:
