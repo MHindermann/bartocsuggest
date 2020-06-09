@@ -75,7 +75,7 @@ class _Utility:
 
         # make the concept scheme:
         if name is None:
-            name = datetime.now().toordinal()
+            name = f"session-{datetime.now().toordinal()}"
         if uri is None:
             uri = f"bartocsuggest:concept-scheme/{name}?language={language}"
         scheme = _ConceptScheme(uri=uri, pref_label=_LanguageMap({language.lower(): name}))

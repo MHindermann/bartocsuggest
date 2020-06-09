@@ -339,9 +339,7 @@ class Session:
         else:
             scheme = _Utility.load_file(words)
 
-        #scheme.uri = "http://123fakestreet.com/" + str(datetime.now()).split(".")[0].replace(" ", "/")
-
-        print(f"{words} loaded successfully, {len(scheme.concepts)} words detected.")
+        print(f"{words} loaded successfully, {len(scheme.concepts)} words detected...")
         return scheme
 
     def _add_source(self, source: _Source) -> None:
@@ -552,20 +550,20 @@ class AnnifSession(Session):
 class _Score:
     """ A score.
 
-    The score's value is derived by a comparison between a search word and a result (computed elsewhere).
+    The score's value is derived by a comparison between a concept and a BARTOC FAST result.
 
     :param value: the score's numerical value, defaults to None
-    :param searchword: the comparandum, defaults to None
-    :param result: the comparans, defaults to None
+    :param comparandum: a concept, defaults to None
+    :param comparans: a result, defaults to None
     """
 
     def __init__(self,
                  value: int = None,
-                 searchword: str = None,
-                 result: _Result = None) -> None:
+                 comparandum: _Concept = None,
+                 comparans: _Result = None) -> None:
         self.value = value
-        self.searchword = searchword
-        self.result = result
+        self.searchword = comparandum
+        self.result = comparans
 
 
 class _Vector:
@@ -620,7 +618,7 @@ class _LevenshteinVector(_Vector):
         except ValueError:
             return None
 
-        return _Score(value=min(scores)[0], searchword=searchword, result=result)
+        return _Score(value=min(scores)[0], comparandum=searchword, comparans=result)
 
     def update_score(self, searchword: str, result: _Result) -> None:
         """ Update the Levenshtein vector with the Levenshtein score from searchword and result.
