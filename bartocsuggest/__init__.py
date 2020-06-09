@@ -352,7 +352,7 @@ class Session:
         else:
             scheme = _Utility.load_file(words)
 
-        print(f"{words} loaded successfully, {len(scheme.concepts)} words detected...")
+        print(f"{words} loaded successfully, {len(scheme.concepts)} words detected.")
         return scheme
 
     def _add_source(self, source: _Source) -> None:
@@ -406,10 +406,12 @@ class Session:
                     break
                 if verbose is True:
                     searchword = concept.get_pref_label()
-                    print(f"Word being fetched is {searchword}")
+                    print(f"Fetching '{searchword}'...", end=" ")
                 query = _Query(concept=concept)
                 query.update_sources(self)
                 counter += 1
+                if verbose is True:
+                    print("done.")
 
         if verbose is True:
             print("Responses collected.")
@@ -430,7 +432,7 @@ class Session:
         """ Return sources from best to worst base on score type. """
 
         if verbose is True:
-            print("Calculating suggestions...")
+            print("Calculating suggestions...", end=" ")
 
         # determine sorting direction:
         high_to_low = False
@@ -450,7 +452,7 @@ class Session:
         suggestion = Suggestion(self._scheme, contenders, sensitivity, score_type)
 
         if verbose is True:
-            print(f"Suggestions calculated.")
+            print("calculated.")
             suggestion.print()
 
         return suggestion
@@ -573,7 +575,7 @@ class _Score:
                  comparans: _Result = None) -> None:
         self.value = value
         self.comparandum = comparandum
-        self.result = comparans
+        self.comparans = comparans
 
 
 class _Vector:
@@ -705,12 +707,12 @@ class _Analysis:
         if initial_vector is None:
             return None
         else:
-            searchwords = set(score.comparandum.get_pref_label() for score in initial_vector) # TODO: check if this is correct
+            searchwords = set(score.comparandum.get_pref_label() for score in initial_vector)
 
         # choose best (=lowest) score for each seachword:
         best_vector = []
         for word in searchwords:
-            scores = [score for score in initial_vector if score.comparandum.get_pref_label() == word] # TODO: check if this is correct
+            scores = [score for score in initial_vector if score.comparandum.get_pref_label() == word]
             best_score = sorted(scores, key=lambda x: x.value)[0]
             # check sensitivity:
             if best_score.value <= sensitivity:
@@ -746,7 +748,7 @@ class _Source:
         """ Update the sources ranking. """
 
         if verbose is True:
-            print(f"Updating {self.uri}...")
+            print(f"Updating {self.uri}...", end=" ")
 
         best_vector = _Analysis.make_best_vector(self.levenshtein_vector, sensitivity)
 
@@ -757,7 +759,7 @@ class _Source:
         self.ranking.recall = _Analysis.make_recall(len(session._scheme.concepts), self.ranking.score_coverage)
 
         if verbose is True:
-            print(f"{self.uri} updated.")
+            print("updated.")
 
 
 class Suggestion:
@@ -850,7 +852,7 @@ class Suggestion:
         # make concept mappings:
         for score in best_vector.get_vector():
             source_concept = score.comparandum
-            target_concept = score.result.get_concept()
+            target_concept = score.comparans.get_concept()
             source_member_set = {source_concept}
             target_member_set = {target_concept}
             source_bundle = _ConceptBundle(member_set=source_member_set)
