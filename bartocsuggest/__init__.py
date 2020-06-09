@@ -68,24 +68,32 @@ class _Result:
 class _Query:
     """ A BARTOC FAST query, see https://bartoc-fast.ub.unibas.ch/bartocfast/api (version 1.0.3).
 
-     :param searchword: the search word
-     :param maxsearchtime: the threshold search time in seconds, defaults to 5
-     :param duplicates: toggle keeping duplicates between resources, defaults to True
-     :param disabled: the disabled resources, defaults to None
-     :param response: the query response, defaults to None
-     """
+    :param concept: the input JSKOS concept
+    :param searchword: the search word, defaults to None
+    :param maxsearchtime: the threshold search time in seconds, defaults to 5
+    :param duplicates: toggle keeping duplicates between resources, defaults to True
+    :param disabled: the disabled resources, defaults to None
+    :param response: the query response, defaults to None
+    """
 
     def __init__(self,
-                 searchword: str,
+                 concept: _Concept,
+                 searchword: str = None,
                  maxsearchtime: int = 5,
                  duplicates: bool = True,
                  disabled: List[str] = None,
                  response: Union[Dict, requests.models.Response] = None) -> None:
-        self.searchword = searchword
+        self.concept = concept
+        if searchword is None:
+            self.searchword = concept.get_pref_label()
+        else:
+            self.searchword = searchword
         self.maxsearchtime = maxsearchtime
         self.duplicates = duplicates
         if disabled is None:
             self.disabled = ["Research-Vocabularies-Australia", "Loterre"]
+        else:
+            self.disabled = disabled
         self.response = response
 
     def send(self) -> None:
@@ -127,7 +135,6 @@ class _Query:
             return None
 
         for dictionary in results:
-
             # transform raw result into object:
             result = self.dict2result(dictionary)
             # get source, add if new:
@@ -137,7 +144,7 @@ class _Query:
                 source = _Source(name)
                 session._add_source(source)
             # update source's score vector:
-            source.levenshtein_vector.update_score(self.searchword, result)
+            source.levenshtein_vector.update_score(self.concept, result)
 
     def result2name(self, result: _Result) -> str:
         """ Return source name based on result.
@@ -233,7 +240,13 @@ class _Query:
             else:
                 duplicates = False
             disabled = parsed_query.get("disabled")
-            query = _Query(searchword, int(maxsearchtime), duplicates, disabled, response=json_object)
+            scheme = _Utility.words2scheme([searchword])
+            concept = _Utility.word2concept(word=searchword, scheme_uri=scheme.uri)
+            query = _Query(concept=concept,
+                           maxsearchtime=int(maxsearchtime),
+                           duplicates=duplicates,
+                           disabled=disabled,
+                           response=json_object)
         except IndexError:
             return None
 
@@ -362,9 +375,9 @@ class Session:
     def _fetch_and_update(self, remote: bool = True, maximum: int = 100000, verbose: bool = False) -> None:
         """ Fetch query responses and update sources.
 
-        :param remote: toggle fetching responses from BARTOC FAST or preload folder.
-        :param maximum: the maximum number of responses fetched.
-        :param verbose: toggle status updates along the way.
+        :param remote: toggle fetching responses from BARTOC FAST or preload folder, defaults to True
+        :param maximum: the maximum number of responses fetched, defualts to 10000
+        :param verbose: toggle status updates along the way, defaults to False
         """
 
         if verbose is True:
@@ -391,11 +404,10 @@ class Session:
             for concept in self._scheme.concepts:
                 if counter > maximum:  # debug
                     break
-                # TODO: generalize this for multi-language support
-                searchword = concept.pref_label.get_value("und") # pick correct language; also, it would make more sense to use uri...
                 if verbose is True:
+                    searchword = concept.get_pref_label()
                     print(f"Word being fetched is {searchword}")
-                query = _Query(searchword)
+                query = _Query(concept=concept)
                 query.update_sources(self)
                 counter += 1
 
@@ -474,12 +486,10 @@ class Session:
                 counter += 1
                 continue
 
-            searchword = concept.pref_label.get_value("und") # pick correct language
             if verbose is True:
+                searchword = concept.get_pref_label()
                 print(f"Preloading word number {counter} '{searchword}'...", end=" ")
-            query = _Query(searchword)
-            response = query.get_response()
-            _Utility.save_json(response, self._preload_folder, f"query_{counter}")
+            _Utility.save_json(_Query(concept=concept).get_response(), self._preload_folder, f"query_{counter}")
             counter += 1
             if verbose is True:
                 print(f"done.")
@@ -562,7 +572,7 @@ class _Score:
                  comparandum: _Concept = None,
                  comparans: _Result = None) -> None:
         self.value = value
-        self.searchword = comparandum
+        self.comparandum = comparandum
         self.result = comparans
 
 
@@ -588,12 +598,12 @@ class _Vector:
 class _LevenshteinVector(_Vector):
     """ A vector of Levenshtein distance scores """
 
-    def make_score(self, searchword: str, result: _Result) -> Optional[_Score]:
+    def make_score(self, concept: _Concept, result: _Result) -> Optional[_Score]:
         """ Make the Levenshtein score for a result.
 
         The Levenshtein score is the minimum Levenshtein distance over all labels and languages.
 
-        :param searchword: the word from which the distance is measured
+        :param concept: the concept from which the distance is measured
         :param result: contains matches to which the distance is measured
         """
 
@@ -607,7 +617,7 @@ class _LevenshteinVector(_Vector):
             distances = []
             # check if label_string has more than one language:
             for foundword in label_string.split(";"):
-                distance = Levenshtein.distance(searchword.lower(), foundword.lower())
+                distance = Levenshtein.distance(concept.get_pref_label().lower(), foundword.lower())
                 distances.append((distance, foundword))
             # add the best foundword and distance tuple per label over all languages:
             scores.append(min(distances))
@@ -618,16 +628,16 @@ class _LevenshteinVector(_Vector):
         except ValueError:
             return None
 
-        return _Score(value=min(scores)[0], comparandum=searchword, comparans=result)
+        return _Score(value=min(scores)[0], comparandum=concept, comparans=result)
 
-    def update_score(self, searchword: str, result: _Result) -> None:
-        """ Update the Levenshtein vector with the Levenshtein score from searchword and result.
+    def update_score(self, concept: _Concept, result: _Result) -> None:
+        """ Update the Levenshtein vector with the Levenshtein score for the concept and result.
 
-        :param searchword: the word from which the distance is measured
+        :param concept: the concept from which the distance is measured
         :param result: contains matches to which the distance is measured
         """
 
-        score = self.make_score(searchword, result)
+        score = self.make_score(concept, result)
         if score is None:
             pass
         else:
@@ -695,12 +705,12 @@ class _Analysis:
         if initial_vector is None:
             return None
         else:
-            searchwords = set(score.searchword for score in initial_vector)
+            searchwords = set(score.comparandum.get_pref_label() for score in initial_vector) # TODO: check if this is correct
 
         # choose best (=lowest) score for each seachword:
         best_vector = []
         for word in searchwords:
-            scores = [score for score in initial_vector if score.searchword == word]
+            scores = [score for score in initial_vector if score.comparandum.get_pref_label() == word] # TODO: check if this is correct
             best_score = sorted(scores, key=lambda x: x.value)[0]
             # check sensitivity:
             if best_score.value <= sensitivity:
@@ -839,9 +849,7 @@ class Suggestion:
 
         # make concept mappings:
         for score in best_vector.get_vector():
-            # TODO: source_concept needs uri: should be added when creating session from words,
-            #  then send it with vector similar to target_concept; also add notation for cocoda
-            source_concept = _Concept(pref_label=_LanguageMap({"und": score.searchword}))
+            source_concept = score.comparandum
             target_concept = score.result.get_concept()
             source_member_set = {source_concept}
             target_member_set = {target_concept}
