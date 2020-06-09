@@ -77,8 +77,8 @@ class _Utility:
         if name is None:
             name = f"session-{datetime.now().toordinal()}"
         if uri is None:
-            uri = f"bartocsuggest:concept-scheme/{name}?language={language}"
-        scheme = _ConceptScheme(uri=uri, pref_label=_LanguageMap({language.lower(): name}))
+            uri = f"bartocsuggest:scheme/{name}?language={language}"
+        scheme = _ConceptScheme(uri=uri)  # to include name: pref_label=_LanguageMap({language.lower(): name}
 
         # add the concepts:
         counter = 1
@@ -99,10 +99,10 @@ class _Utility:
         :param notation: the notation of the word, defaults to None
         """
 
-        uri = f"bartocsuggest:concept/{cls.word2uri(word, language)}?language={language}"
+        uri = cls.word2uri(word, language)
         concept = _Concept(uri=uri,
                            pref_label=_LanguageMap({language.lower(): word}),
-                           in_scheme=set(scheme_uri))
+                           in_scheme=set([scheme_uri]))
         if notation is not None:
             concept.notation = [notation]
 
