@@ -78,7 +78,11 @@ class _Resource:
             elif type(value) is list or type(value) is set:
                 value_list = list()
                 for element in value:
-                    value_list.append(element.get_dict(ignore))
+                    try:
+                        value_list.append(element.get_dict(ignore))
+                    # element is str:
+                    except AttributeError:
+                        value_list.append(element)
                 dictionary.update({self.get_string(attribute): value_list})
 
             elif type(value) is _ConceptBundle:
@@ -164,6 +168,11 @@ class _Concept(_Item):
                          alt_label=alt_label,
                          hidden_label=hidden_label,
                          definition=definition)
+
+    def get_pref_label(self):
+        """ Get the value for the concept's prefLabel. """
+
+        return list(self.pref_label.get_dict().values())[0]
 
 
 class _ConceptScheme(_Item):
