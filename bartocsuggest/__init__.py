@@ -7,9 +7,6 @@ Documentation available at: https://bartocsuggest.readthedocs.io/en/latest/
 Codebase available at: https://github.com/MHindermann/bartocsuggest
 """
 
-# TODO: update readme with AnnifSession example
-# TODO: update readme with concordance/mappings example
-
 from __future__ import annotations
 from typing import List, Optional, Dict, Union, Tuple
 from time import sleep
@@ -873,7 +870,7 @@ class Suggestion:
         The concordance is between the session's input words from which this suggestion was derived and a vocabulary
         to be chosen by URI. If no vocabulary URI is selected, the most highly suggested vocabulary is used.
         To see the suggested vocabularies and their URIs, use the print method of this class.
-        For JSKOS, see https://gbv.github.io/jskos/context.json (version 0.4.6).
+        For JSKOS, see https://gbv.github.io/jskos/jskos.html (version 0.4.6).
 
         :param vocabulary_uri: the URI of the vocabulary, defaults to None
         """
