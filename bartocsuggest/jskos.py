@@ -51,7 +51,7 @@ class _Resource:
         """
 
         if ignore is None:
-            ignore = ["context"]
+            ignore = ["context", "url", "in_scheme"]
         dictionary = dict()
         attributes = self.__dict__.keys()
 
@@ -60,7 +60,6 @@ class _Resource:
             # define output for different objects (it shouldn't be cluttered):
             if attribute is "from_scheme":
                 ignore.append("concepts")
-                ignore.append("url")
 
             # skip if attribute is ignored:
             if attribute in ignore:
@@ -90,7 +89,6 @@ class _Resource:
                 for element in value.member_set:
                     value_list.append(element.get_dict(ignore))
                 dictionary.update({self.get_string(attribute): {self.get_string("member_set"): value_list}})
-
             # TODO: add clauses for cases similar to _ConceptBundle (e.g., _ConceptScheme.concepts)
 
             else:
