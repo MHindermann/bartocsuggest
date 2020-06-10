@@ -168,7 +168,11 @@ class _Utility:
 
     @classmethod
     def load_json(cls, folder: str, filename: str) -> Dict:
-        """ Load a JSON object as dictionary from a file """
+        """ Load a JSON object as dictionary from a file.
+
+        :param folder: the path to the folder
+        :param filename: the name of the file
+        """
 
         filename = folder + f"{filename}.json"
 

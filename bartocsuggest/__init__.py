@@ -144,7 +144,7 @@ class _Query:
             source.levenshtein_vector.update_score(self.concept, result)
 
     def result2name(self, result: _Result) -> str:
-        """ Return source name based on result.
+        """ Return the source name based on the result.
 
          :param result: a result
          """
@@ -200,7 +200,10 @@ class _Query:
         return payload
 
     def get_response(self, verbose: bool = False) -> Dict:
-        """ Return the query response. """
+        """ Return the query response.
+
+        :param verbose: toggle status updates along the way, defaults to False
+        """
 
         # fetch response if not available:
         if self.response is None:
@@ -219,7 +222,10 @@ class _Query:
 
     @classmethod
     def make_query_from_json(cls, json_object: Dict) -> Optional[_Query]:
-        """ Return query object initialized from preloaded query response """
+        """ Return query object initialized from a preloaded query response.
+
+         :param json_object: the preloaded response
+         """
 
         # extract query parameters from json object:
         context = json_object.get("@context")
@@ -361,7 +367,10 @@ class Session:
         self._sources.append(source)
 
     def _get_source(self, uri: str) -> Optional[_Source]:
-        """ Return source by URI. """
+        """ Return source by URI.
+
+         :param uri: the URI
+         """
 
         for source in self._sources:
             if uri == source.uri:
@@ -414,7 +423,11 @@ class Session:
             print("Responses collected.")
 
     def _update_rankings(self, sensitivity: int, verbose: bool = False):
-        """ Update the sources' rankings. """
+        """ Update the sources' rankings.
+
+        :param sensitivity: the used sensitivity
+        :param verbose: toggle status updates along the way, defaults to False
+        """
 
         if verbose is True:
             print("Updating source rankings...")
@@ -426,7 +439,12 @@ class Session:
             print("Source rankings updated.")
 
     def _make_suggestion(self, sensitivity: int, score_type: ScoreType, verbose: bool = False) -> Suggestion:
-        """ Return sources from best to worst base on score type. """
+        """ Return sources from best to worst base on score type.
+
+        :param sensitivity: the used sensitivity
+        :param score_type: the used score type
+        :param verbose: toggle status updates along the way, defaults to False
+        """
 
         if verbose is True:
             print("Calculating suggestions...", end=" ")
@@ -576,7 +594,10 @@ class _Score:
 
 
 class _Vector:
-    """ A vector of scores. """
+    """ A vector of scores.
+
+    :param vector:
+    """
 
     def __init__(self,
                  vector: List[_Score] = None) -> None:
@@ -644,7 +665,13 @@ class _LevenshteinVector(_Vector):
 
 
 class _Ranking:
-    """ The ranking of a source given its best Levenshtein vector. """
+    """ The ranking of a source given its best Levenshtein vector.
+
+    :param score_sum:
+    :param score_average:
+    :param score_coverage:
+    :param recall:
+    """
 
     def __init__(self,
                  score_sum: int = None,
@@ -665,7 +692,10 @@ class _Analysis:
     def make_score_sum(cls, vector: _LevenshteinVector) -> Optional[int]:
         """ Return the sum of all scores in the vector.
 
-        The lower the sum the better. """
+        The lower the sum the better.
+
+        :param vector: the vector
+        """
 
         try:
             return sum(score.value for score in vector.get_vector())
@@ -676,7 +706,10 @@ class _Analysis:
     def make_score_average(cls, vector: _LevenshteinVector) -> Optional[float]:
         """ Return the vector's average score.
 
-         The lower the average the better. """
+        The lower the average the better.
+
+        :param vector: the vector
+        """
 
         score_sum = cls.make_score_sum(vector)
         if score_sum is None:
@@ -686,7 +719,10 @@ class _Analysis:
 
     @classmethod
     def make_score_coverage(cls, vector: _LevenshteinVector) -> Optional[int]:
-        """ Return the number of scores in the vector. """
+        """ Return the number of scores in the vector.
+
+        :param vector: the vector
+        """
 
         try:
             return len(vector.get_vector())
@@ -697,7 +733,11 @@ class _Analysis:
     def make_best_vector(cls, vector: _LevenshteinVector, sensitivity: int) -> Optional[_LevenshteinVector]:
         """ Return the best vector of a vector.
 
-         The best vector has the best score for each searchword. """
+        The best vector has the best score for each search word.
+
+        :param vector: the vector
+        :param sensitivity: the used sensitivity
+        """
 
         # collect all unique searchwords in vector:
         initial_vector = vector.get_vector()
@@ -721,7 +761,11 @@ class _Analysis:
     def make_recall(cls, relevant: int, retrieved: int) -> Optional[float]:
         """ Return recall.
 
-         See https://en.wikipedia.org/wiki/Precision_and_recall#Recall """
+        See https://en.wikipedia.org/wiki/Precision_and_recall#Recall.
+
+        :param relevant: the number of relevant hits
+        :param retrieved: the number of retrieved hits
+        """
 
         try:
             return retrieved / relevant
@@ -730,7 +774,12 @@ class _Analysis:
 
 
 class _Source:
-    """ A BARTOC FAST source. """
+    """ A BARTOC FAST source.
+
+    :param uri:
+    :param levenshtein_vector:
+    :param ranking:
+    """
 
     def __init__(self,
                  uri: str,
@@ -782,7 +831,8 @@ class Suggestion:
         """ Return the suggested vocabularies sorted from best to worst.
 
         :param scores: toggle returning results and their scores, defaults to False
-        :param max: limit the number of suggestions to max, defaults to None """
+        :param max: limit the number of suggestions to max, defaults to None
+        """
 
         results = []
 
