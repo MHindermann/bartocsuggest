@@ -490,7 +490,7 @@ class Session:
 
             if verbose is True:
                 searchword = concept.get_pref_label()
-                print(f"Preloading word number {counter} '{searchword}'...", end=" ")
+                print(f"Preloading word number {counter + 1} '{searchword}'...", end=" ")
             _Utility.save_json(_Query(concept=concept).get_response(), self._preload_folder, f"query_{counter}")
             counter += 1
             if verbose is True:
