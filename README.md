@@ -59,7 +59,7 @@ suggestion_average = session.suggest(remote=False, score_type="Average", verbose
 ```
 
 ## Exporting suggestions 
-The input words and the suggested vocabularies are modelled as JSKOS concept schemes (see https://gbv.github.io/jskos/jskos.html). The the concordance between the input words and any suggested vocabulary can be exported as JSON-file. Similarily, the mappings between the input words and any suggested vocabulary can be exported as NDJSON-file (e.g., for use in Concoda Mapping Tool, see https://coli-conc.gbv.de/cocoda/app/).
+The input words and the suggested vocabularies are modelled as JSKOS concept schemes (see https://gbv.github.io/jskos/jskos.html). The the concordance between the input words and any suggested vocabulary can be exported as JSON-file. Similarily, the mappings between the input words and any suggested vocabulary can be exported as NDJSON-file (e.g., for use in the Concoda Mapping Tool, see https://coli-conc.gbv.de/cocoda/app/).
 ```
 suggestion.save_concordance("my/save/folder")
 suggestion.save_mappings("my/save/folder", vocabulary_uri="vocabulary.worldbank.org")
