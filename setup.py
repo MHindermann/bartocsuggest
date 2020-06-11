@@ -18,7 +18,7 @@ setuptools.setup(
         "requests",
         "python-Levenshtein-wheels",
         "openpyxl",
-        "annif_client",
+        "annif-client",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
