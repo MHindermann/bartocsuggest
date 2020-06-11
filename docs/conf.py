@@ -22,7 +22,7 @@ copyright = '2020, Maximilian Hindermann'
 author = 'Maximilian Hindermann'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.2'
+release = '0.0.3'
 
 
 # -- General configuration ---------------------------------------------------

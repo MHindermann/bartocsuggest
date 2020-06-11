@@ -12,9 +12,9 @@ pip install bartocsuggest
 ```
 from bartocsuggest import Session
 
-mywords = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
+my_words = ["auction", "market", "marketing", "market economy", "perfect competition", "capitalism", "stock market"]
 
-session = Session(mywords)
+session = Session(my_words)
 session.suggest(verbose=True)
 ```
 
@@ -53,9 +53,30 @@ session.preload(100-199)
 session.preload(200-299)
 
 # try out different suggestions:
-suggestion1 = session.suggest(remote=False, verbose=True)
-suggestion2 = session.suggest(remote=False, sensitivity=2, verbose=True)
-suggestion3 = session.suggest(remote=False, score_type="Average", verbose=True)
+suggestion = session.suggest(remote=False, verbose=True)
+suggestion_low_sensitivity = session.suggest(remote=False, sensitivity=5, verbose=True)
+suggestion_average = session.suggest(remote=False, score_type="Average", verbose=True)
+```
+
+## Exporting suggestions 
+The input words and the suggested vocabularies are modelled as JSKOS concept schemes (see https://gbv.github.io/jskos/jskos.html). The the concordance between the input words and any suggested vocabulary can be exported as JSON-file. Similarily, the mappings between the input words and any suggested vocabulary can be exported as NDJSON-file (e.g., for use in the Concoda Mapping Tool, see https://coli-conc.gbv.de/cocoda/app).
+```
+suggestion.save_concordance("my/save/folder")
+suggestion.save_mappings("my/save/folder", vocabulary_uri="vocabulary.worldbank.org")
+```
+
+## Annif wrapper
+The Annif wrapper is built using the Annif-client module (https://pypi.org/project/annif-client) and enables bartocsuggest to suggest vocabularies based on texts:
+```
+from bartocsuggest import AnnifSession
+
+my_text = "Plant viruses are widespread and economically important pathogens..."
+
+# generate subject indexing for my_text:
+annif_session = AnnifSession(my_text, project_id="yso-en")
+
+# make suggestion based on subject indexing:
+annif_session.suggest(verbose=True)
 ```
 
 ## Documentation
