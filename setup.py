@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="bartocsuggest",
-    version="0.0.2",
+    version="0.0.3",
     author="Maximilian Hindermann",
     author_email="maximilian.hindermann@unibas.ch",
     description="Vocabulary suggestion module based on BARTOC FAST",
@@ -18,6 +18,7 @@ setuptools.setup(
         "requests",
         "python-Levenshtein-wheels",
         "openpyxl",
+        "annif-client",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
