@@ -264,14 +264,3 @@ class _Concordance(_Item):
                          context=context,
                          url=url,
                          pref_label=pref_label)
-
-
-class _TestRessource:
-    """ http://gbv.github.io/jskos/jskos.html#resource
-
-    :param context: bla
-    """
-
-    def __init__(self, **optional_fields):
-        for key, value in optional_fields:
-            self.key = value

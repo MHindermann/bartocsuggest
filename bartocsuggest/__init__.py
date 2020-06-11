@@ -94,7 +94,10 @@ class _Query:
         self.response = response
 
     def send(self) -> None:
-        """ Send query as HTTP request to BARTOC FAST API; the response is saved to the response attribute. """
+        """ Send query as HTTP request to BARTOC FAST API.
+
+        The response is saved to the response attribute.
+        """
 
         payload = self.get_payload()
         try:
@@ -266,7 +269,6 @@ class ScoreType:
     """
 
     pass
-    # TODO: implement measure for noise
 
 
 class Recall(ScoreType):
@@ -596,7 +598,7 @@ class _Score:
 class _Vector:
     """ A vector of scores.
 
-    :param vector:
+    :param vector: the vector
     """
 
     def __init__(self,
@@ -607,7 +609,7 @@ class _Vector:
             self._vector = vector
 
     def get_vector(self) -> Optional[List[_Score]]:
-        """ Get the vector if any. """
+        """ Return the vector (if any). """
 
         if len(self._vector) is 0:
             return None
@@ -616,7 +618,7 @@ class _Vector:
 
 
 class _LevenshteinVector(_Vector):
-    """ A vector of Levenshtein distance scores """
+    """ A vector of Levenshtein distance scores. """
 
     def make_score(self, concept: _Concept, result: _Result) -> Optional[_Score]:
         """ Make the Levenshtein score for a result.
@@ -667,10 +669,10 @@ class _LevenshteinVector(_Vector):
 class _Ranking:
     """ The ranking of a source given its best Levenshtein vector.
 
-    :param score_sum:
-    :param score_average:
-    :param score_coverage:
-    :param recall:
+    :param score_sum: the sum of all scores in the vector, defaults to None
+    :param score_average: the vector's average score, defaults to None
+    :param score_coverage: the number of scores in the vector, defaults to None
+    :param recall: the recall, defaults to None
     """
 
     def __init__(self,
@@ -685,7 +687,6 @@ class _Ranking:
 
 
 class _Analysis:
-    # TODO: move classmethods to appropriate classes
     """ A collection of methods for analyzing score vectors. """
 
     @classmethod
@@ -776,9 +777,9 @@ class _Analysis:
 class _Source:
     """ A BARTOC FAST source.
 
-    :param uri:
-    :param levenshtein_vector:
-    :param ranking:
+    :param uri: the source's URI
+    :param levenshtein_vector: the source's Levenshtein vector, defaults to None
+    :param ranking: the source's ranking, defaults to None
     """
 
     def __init__(self,
@@ -835,7 +836,6 @@ class Suggestion:
         """
 
         results = []
-
         for source in self._sources:
             try:
                 if len(results) + 1 > max:

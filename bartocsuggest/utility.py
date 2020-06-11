@@ -14,7 +14,7 @@ from .jskos import _Concept, _ConceptScheme, _LanguageMap
 
 
 class _Utility:
-    """ Utility functions """
+    """ A collection of utility functions. """
 
     @classmethod
     def load_file(cls, filename: str, language: str = "und") -> Optional[_ConceptScheme]:
@@ -91,7 +91,7 @@ class _Utility:
 
     @classmethod
     def word2concept(cls, word: str, scheme_uri: str, language: str = "und", notation: str = None) -> _Concept:
-        """ Transfom a word into as JSKOS concept.
+        """ Transform a word into a JSKOS concept.
 
         :param word: the input word
         :param scheme_uri: the URI of the concept scheme
@@ -124,7 +124,7 @@ class _Utility:
 
     @classmethod
     def annif2jskos(cls, annif_suggestion: List[dict], annif_project_id: str) -> _ConceptScheme:
-        """ Transform an Annif suggestion to JSKOS.
+        """ Transform an Annif suggestion into a JSKOS concept scheme.
 
         :param annif_suggestion: the output of calling AnnifClient.suggest
         :param annif_project_id: Annif API project identifier
@@ -137,14 +137,12 @@ class _Utility:
         name = project.get("name")
 
         # setup concept scheme based on project details:
-        # TODO: add project uri
         scheme = _ConceptScheme(pref_label=_LanguageMap({language: name}))
 
         # make concept from result and add to concept scheme:
         for result in annif_suggestion:
             label = result.get("label")
             uri = result.get("uri")
-            # TODO: add inscheme = concept scheme's uri
             concept = _Concept(uri=uri, pref_label=_LanguageMap({language: label}))
             scheme.concepts.append(concept)
 
